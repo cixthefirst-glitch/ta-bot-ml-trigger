@@ -1,0 +1,50 @@
+{
+  "8188554666": {
+    "user_id": "8188554666",
+    "username": "dominick650",
+    "first_name": "Dominick",
+    "plan": "trial",
+    "plan_label": "Trial",
+    "started_at": 1783036019.5116367,
+    "expires_at": 1783295219.5116367,
+    "is_trial": true,
+    "amount_paid_usd": 0,
+    "tx_hash": ""
+  },
+  "8184244632": {
+    "user_id": "8184244632",
+    "username": "HOUND_59",
+    "first_name": "HOUND",
+    "plan": "trial",
+    "plan_label": "Trial",
+    "started_at": 1783036127.5383234,
+    "expires_at": 1783295327.5383234,
+    "is_trial": true,
+    "amount_paid_usd": 0,
+    "tx_hash": ""
+  },
+  "6470245111": {
+    "user_id": "6470245111",
+    "username": "Trumpkilledme",
+    "first_name": "\ud835\ude7e\ud835\ude73\ud835\ude88\ud835\ude7b",
+    "plan": "trial",
+    "plan_label": "Trial",
+    "started_at": 1783069584.8253682,
+    "expires_at": 1783328784.8253682,
+    "is_trial": true,
+    "amount_paid_usd": 0,
+    "tx_hash": ""
+  },
+  "7081748559": {
+    "user_id": "7081748559",
+    "username": "treasureogar",
+    "first_name": "Manuel",
+    "plan": "trial",
+    "plan_label": "Trial",
+    "started_at": 1783090360.61902,
+    "expires_at": 1783349560.61902,
+    "is_trial": true,
+    "amount_paid_usd": 0,
+    "tx_hash": ""
+  }
+}
