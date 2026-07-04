@@ -1,0 +1,4 @@
+data/signals.json
+data/model.pkl
+__pycache__/
+*.pyc

@@ -1,0 +1,39 @@
+name: daily-retrain
+on:
+  schedule:
+    - cron: '0 11 * * *'   # 12:00 PM Lagos daily
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  retrain:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install deps
+        run: pip install -r requirements.txt
+      - name: Backtest
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          ADMIN_CHAT_ID: ${{ secrets.ADMIN_CHAT_ID }}
+        run: python backtest.py
+      - name: Train ML
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          ADMIN_CHAT_ID: ${{ secrets.ADMIN_CHAT_ID }}
+        run: python ml/train.py
+      - name: Commit updated data
+        run: |
+          git config user.name "ta-bot-ml-bot"
+          git config user.email "bot@ta-ml.local"
+          git add data/ || true
+          git diff --cached --quiet || git commit -m "auto: retrain $(date -u +%FT%TZ)"
+          git push
