@@ -1,0 +1,38 @@
+name: hourly-scan
+
+on:
+  schedule:
+    - cron: '0 * * * *'   # top of every hour UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install deps
+        run: pip install -r requirements.txt
+      - name: Run scan + broadcast
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          ADMIN_CHAT_ID: ${{ secrets.ADMIN_CHAT_ID }}
+          MEXC_SECRET_KEY: ${{ secrets.MEXC_SECRET_KEY }}
+          MEXC_ACCESS_KEY: ${{ secrets.MEXC_ACCESS_KEY }}
+          COINGECKO_API_KEY: ${{ secrets.COINGECKO_API_KEY }}
+        run: python bot.py
+      - name: Commit updated data
+        run: |
+          git config user.name "ta-bot-ml-bot"
+          git config user.email "bot@ta-ml.local"
+          git add data/ || true
+          git diff --cached --quiet || git commit -m "auto: hourly scan $(date -u +%FT%TZ)"
+          git push
