@@ -18,150 +18,16 @@ STATE_FILE = "data/signals.json"
 MODEL_FILE = "data/model.pkl"
 
 GEMINI_KEY = os.environ["GEMINI_API_KEY"]
-TG_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
+TG_TOKEN = "8766961406:AAEikTWIpdxMjjUEfd6qW-79o2zgz_95gvw"
 TG_CHAT = os.environ["TELEGRAM_CHAT_ID"]
 ADMIN_CHAT = os.environ.get("ADMIN_CHAT_ID", "")  # your personal chat ID for diagnostics
 MEXC_SECRET = os.environ.get("MEXC_SECRET_KEY", "")
 MEXC_ACCESS = os.environ.get("MEXC_ACCESS_KEY", "")
 CG_KEY = os.environ.get("COINGECKO_API_KEY", "")
 
-# ===== Volatility thresholds (multi-armed bandit) =====
-# The bandit learns which volatility threshold is actually profitable
-# by tracking outcomes of every signal. Weights are persisted to the
-# repo so they survive GitHub Actions' ephemeral runner restarts.
-THRESHOLDS = [0.5, 1.0, 2.0, 3.0, 5.0]   # the 5 arms of the bandit
-# Prior bias: 5% starts favored (user's trusted setting), low thresholds underweighted
-# until the data proves otherwise.
-PRIOR_WEIGHTS = {"0.5": 0.4, "1.0": 0.6, "2.0": 0.8, "3.0": 1.2, "5.0": 2.0}
-# Multiplicative update on each resolved signal
-LEARN_TP1 = 1.15
-LEARN_TP2 = 1.25
-LEARN_TP3 = 1.40
-LEARN_LOSS = 0.75
-LEARN_TIMEOUT = 0.92
-WEIGHTS_FILE = "data/threshold_weights.json"
 # Only consider the top N coins by 24h quote volume to keep API calls manageable
-TOP_N_BY_VOLUME = 400  # bumped from 200 for more candidates / bandit learning data
+TOP_N_BY_VOLUME = 400
 MAX_WORKERS = 10  # parallel 1h change fetches
-
-# ===== Bandit: load/save/select/update =====
-def _load_weights_raw():
-    """Load weights from local file or return prior defaults."""
-    if not os.path.exists(WEIGHTS_FILE):
-        return dict(PRIOR_WEIGHTS)
-    try:
-        with open(WEIGHTS_FILE) as f:
-            data = json.load(f)
-        w = data.get("weights", {})
-        for t in THRESHOLDS:
-            w.setdefault(str(t), PRIOR_WEIGHTS[str(t)])
-        return w
-    except Exception as e:
-        print(f"[BANDIT] load error: {e}; using prior")
-        return dict(PRIOR_WEIGHTS)
-
-
-def _renormalize(weights):
-    """Keep weights bounded so one runaway winner doesn't kill exploration."""
-    mx = max(weights.values())
-    mn = min(weights.values())
-    if mx > 50.0 or mn < 0.01:
-        scale = 10.0 / mx if mx > 0 else 1.0
-        return {k: max(0.05, v * scale) for k, v in weights.items()}
-    return weights
-
-
-def select_threshold(coin_ch24):
-    """Pick a threshold arm using epsilon-greedy on learned weights.
-    90% exploit (highest weight), 10% explore (random arm)."""
-    weights = _load_weights_raw()
-    if random.random() < 0.20:   # bumped 0.10 -> 0.20 on 2026-07-03 (more exploration while bandit is young)
-        return random.choice(THRESHOLDS), weights
-    best_t = max(THRESHOLDS, key=lambda t: weights.get(str(t), 1.0))
-    return best_t, weights
-
-
-def update_bandit(threshold_fired, outcome):
-    """Update the weight for one arm based on a resolved signal's outcome."""
-    weights = _load_weights_raw()
-    t = str(threshold_fired)
-    if t not in weights:
-        weights[t] = PRIOR_WEIGHTS.get(t, 1.0)
-    if outcome == "CLOSED_WIN_TP1":
-        weights[t] *= LEARN_TP1
-    elif outcome == "CLOSED_WIN_TP2":
-        weights[t] *= LEARN_TP2
-    elif outcome == "CLOSED_WIN_TP3":
-        weights[t] *= LEARN_TP3
-    elif outcome == "CLOSED_LOSS":
-        weights[t] *= LEARN_LOSS
-    elif outcome == "TIMEOUT":
-        weights[t] *= LEARN_TIMEOUT
-    else:
-        return None
-    weights = _renormalize(weights)
-    _save_weights_raw(weights)
-    print(f"[BANDIT] {t}% -> {outcome} | weight: {weights[t]:.3f}")
-    return weights
-
-
-def _save_weights_raw(weights):
-    """Save weights to local file, then best-effort-commit to repo."""
-    os.makedirs(os.path.dirname(WEIGHTS_FILE), exist_ok=True)
-    payload = {
-        "weights": weights,
-        "updated_at": datetime.now(timezone.utc).isoformat(),
-    }
-    with open(WEIGHTS_FILE, "w") as f:
-        json.dump(payload, f, indent=2)
-    try:
-        subprocess.run(["git", "add", WEIGHTS_FILE], cwd=".", capture_output=True, timeout=10)
-        diff = subprocess.run(
-            ["git", "diff", "--cached", "--quiet", WEIGHTS_FILE],
-            capture_output=True, timeout=10,
-        )
-        if diff.returncode != 0:
-            subprocess.run(
-                ["git", "commit", "-m", f"bandit: update weights", WEIGHTS_FILE],
-                cwd=".", capture_output=True, timeout=10,
-            )
-            subprocess.run(
-                ["git", "push", "origin", "main"],
-                cwd=".", capture_output=True, timeout=30,
-            )
-    except Exception as e:
-        print(f"[BANDIT] git commit skipped: {e}")
-
-
-def bandit_report():
-    """Return a human-readable summary of current weights."""
-    weights = _load_weights_raw()
-    sigs = load_signals()
-    by_arm = {str(t): {"wins": 0, "losses": 0, "open": 0, "timeout": 0} for t in THRESHOLDS}
-    for s in sigs:
-        arm = str(s.get("threshold", ""))
-        if arm not in by_arm:
-            continue
-        st = s.get("status", "")
-        if st == "OPEN":
-            by_arm[arm]["open"] += 1
-        elif "WIN" in st:
-            by_arm[arm]["wins"] += 1
-        elif st == "CLOSED_LOSS":
-            by_arm[arm]["losses"] += 1
-        elif st == "TIMEOUT":
-            by_arm[arm]["timeout"] += 1
-    lines = ["Bandit Threshold Weights:"]
-    for t in THRESHOLDS:
-        w = weights.get(str(t), 1.0)
-        s = by_arm[str(t)]
-        closed = s["wins"] + s["losses"] + s["timeout"]
-        wr = (s["wins"] / closed * 100) if closed > 0 else 0
-        bar = "#" * int(min(w, 5.0)) + "." * int(max(0, 5.0 - min(w, 5.0)))
-        lines.append(f"  {t:>4}% {bar} w={w:.2f}  n={closed} (W:{s['wins']} L:{s['losses']} T:{s['timeout']} O:{s['open']}) WR={wr:.0f}%")
-    return "\n".join(lines)
-
-
 
 # ===== Telegram =====
 def tg_send(text, to_admin=False):
@@ -238,8 +104,7 @@ def get_1h_change(symbol):
 
 def get_tickers():
     """Return top-volume USDT pairs passing EITHER 24h >= 0.1% OR 1h >= 0.1%.
-    (Lowered from 0.3% to 0.1% to feed the ML more candidates.
-    The bandit still picks which arm (0.5/1/2/3/5%) plays on each signal.)"""
+    (Lowered from 0.3% to 0.1% to feed the ML more candidates.)"""
     top = get_top_usdt_tickers(TOP_N_BY_VOLUME)
     if not top: return []
 
@@ -456,7 +321,7 @@ Answer YES or NO."""
 def scan_market():
     print(f"[{datetime.now(timezone.utc).isoformat()}] Scanning MEXC (top {TOP_N_BY_VOLUME} by volume)...")
     candidates = get_tickers()
-    FLOOR = min(THRESHOLDS)
+    FLOOR = 0.1
     n_24h = sum(1 for _, ch24, _ in candidates if ch24 is not None and abs(ch24) >= FLOOR)
     n_1h = len(candidates) - n_24h
     print(f"Found {len(candidates)} volatile coins (24h>={FLOOR}%: {n_24h}, 1h>={FLOOR}%: {n_1h})")
@@ -521,7 +386,6 @@ def scan_market():
             sl = last_close + atr_v * 1.5
             tp1 = last_close - atr_v * 1.0; tp2 = last_close - atr_v * 2.0; tp3 = last_close - atr_v * 3.0
         relevant_ch = ch1h if ch1h is not None else ch24
-        chosen_t, _weights = select_threshold(relevant_ch)
         sig = {
             "id": f"{symbol}_{int(time.time())}",
             "ts": datetime.now(timezone.utc).isoformat(),
@@ -532,11 +396,9 @@ def scan_market():
             "btc_context": {"btc_24h": market_ctx.get("btc_24h"), "btc_trend": market_ctx.get("btc_trend")},
             "trigger": "1h" if ch1h is not None else "24h",
             "ch24": ch24, "ch1h": ch1h,
-            "threshold": chosen_t,
             "status": "OPEN",
         }
         signals.append(sig)
-        print(f"  [BANDIT] armed {chosen_t}% for {symbol} (ch={relevant_ch:+.2f}%)")
     print(f"Generated {len(signals)} signals (CG calls used: {cg_calls})")
     return signals
 
@@ -551,21 +413,18 @@ def check_outcomes(open_signals):
         for k in klines[-5:]:
             high = float(k[2]); low = float(k[3])
             if sig["side"] == "LONG":
-            if low <= sig["sl"]: new_status = "CLOSED_LOSS"; break
-            if high >= sig["tp3"]: new_status = "CLOSED_WIN_TP3"; break
-            if high >= sig["tp2"]: new_status = "CLOSED_WIN_TP2"; break
-            if high >= sig["tp1"]: new_status = "CLOSED_WIN_TP1"; break
+                if low <= sig["sl"]: new_status = "CLOSED_LOSS"; break
+                if high >= sig["tp3"]: new_status = "CLOSED_WIN_TP3"; break
+                if high >= sig["tp2"]: new_status = "CLOSED_WIN_TP2"; break
+                if high >= sig["tp1"]: new_status = "CLOSED_WIN_TP1"; break
             else:
-            if high >= sig["sl"]: new_status = "CLOSED_LOSS"; break
-            if low <= sig["tp3"]: new_status = "CLOSED_WIN_TP3"; break
-            if low <= sig["tp2"]: new_status = "CLOSED_WIN_TP2"; break
-            if low <= sig["tp1"]: new_status = "CLOSED_WIN_TP1"; break
+                if high >= sig["sl"]: new_status = "CLOSED_LOSS"; break
+                if low <= sig["tp3"]: new_status = "CLOSED_WIN_TP3"; break
+                if low <= sig["tp2"]: new_status = "CLOSED_WIN_TP2"; break
+                if low <= sig["tp1"]: new_status = "CLOSED_WIN_TP1"; break
         if new_status != old_status:
             sig["status"] = new_status
             sig["closed_at"] = datetime.now(timezone.utc).isoformat()
-            t = sig.get("threshold")
-            if t is not None:
-                update_bandit(t, new_status)
         updated.append(sig)
     return updated
 
@@ -598,10 +457,9 @@ def broadcast_signals(signals, to_admin=False):
         reasons = sig.get("reasons", [])
         ch24 = sig.get("ch24", 0)
         ch1h = sig.get("ch1h", 0)
-        threshold = sig.get("threshold", 0)
         text += f"\n<b>{side}</b> {symbol}\n"
         text += f"Entry: {entry:.6f} | SL: {sl:.6f} | TP1: {tp1:.6f} | TP2: {tp2:.6f} | TP3: {tp3:.6f}\n"
-        text += f"Score: {score:.2f} | Threshold: {threshold}% | 24h: {ch24:+.2f}% | 1h: {ch1h:+.2f}%\n"
+        text += f"Score: {score:.2f} | 24h: {ch24:+.2f}% | 1h: {ch1h:+.2f}%\n"
         if reasons:
             text += f"Reasons: {', '.join(reasons)}\n"
     tg_send(text, to_admin)
@@ -625,8 +483,6 @@ def main():
         broadcast_signals(updated, to_admin=True)
         save_signals(updated)
         print(f"Updated {len(updated)} signals")
-    # Optional: send bandit report to admin
-    # print(bandit_report())
 
 if __name__ == "__main__":
     main()
