@@ -237,13 +237,13 @@ def get_1h_change(symbol):
     return None
 
 def get_tickers():
-    """Return top-volume USDT pairs passing EITHER 24h >= 0.3% OR 1h >= 0.3%.
-    (Lowered from 5%/3% in 2026-07-03 to feed the bandit more candidates.
+    """Return top-volume USDT pairs passing EITHER 24h >= 0.1% OR 1h >= 0.1%.
+    (Lowered from 0.3% to 0.1% to feed the ML more candidates.
     The bandit still picks which arm (0.5/1/2/3/5%) plays on each signal.)"""
     top = get_top_usdt_tickers(TOP_N_BY_VOLUME)
     if not top: return []
 
-    FLOOR = 0.3   # was min(THRESHOLDS)=0.5% — lowered 2026-07-03 for more signal volume (bandit needs data)
+    FLOOR = 0.1   # minimum movement to consider a coin (24h or 1h) — keeps out dead coins
     candidates_24h = [x for x in top if abs(x["ch24"]) >= FLOOR]
     print(f"  Top {len(top)} by volume, {len(candidates_24h)} pass 24h >= {FLOOR}%")
 
@@ -279,153 +279,171 @@ def get_klines(symbol, interval="1h", limit=100):
 CG_CACHE = {}
 CG_RATE_LIMITED_UNTIL = 0
 
-def cg_get(path, params=None, ttl=120):
-    global CG_RATE_LIMITED_UNTIL
-    if time.time() < CG_RATE_LIMITED_UNTIL: return None
-    cache_key = f"{path}:{json.dumps(params or {}, sort_keys=True)}"
-    if cache_key in CG_CACHE:
-        ts, val = CG_CACHE[cache_key]
-        if time.time() - ts < ttl: return val
-    headers = {"x-cg-pro-api-key": CG_KEY} if CG_KEY else {}
-    try:
-        r = requests.get(f"{CG_BASE}{path}", params=params, headers=headers, timeout=15)
-        if r.status_code == 200:
-            CG_CACHE[cache_key] = (time.time(), r.json())
-            return r.json()
-        elif r.status_code == 429:
-            print(f"CG rate limited (429), backing off 60s")
-            CG_RATE_LIMITED_UNTIL = time.time() + 60
-            return None
-        else:
-            print(f"CG error {r.status_code}: {path}")
-            return None
-    except Exception as e:
-        print(f"CG exception: {e}")
-        return None
-
-def get_btc_eth_context():
-    data = cg_get("/simple/price", {
-        "ids": "bitcoin,ethereum",
-        "vs_currencies": "usd",
-        "include_24hr_change": "true",
-    }, ttl=300)
-    if not data: return {"btc_24h": 0, "eth_24h": 0, "btc_trend": "neutral"}
-    btc_24h = data.get("bitcoin", {}).get("usd_24h_change", 0) or 0
-    eth_24h = data.get("ethereum", {}).get("usd_24h_change", 0) or 0
-    if btc_24h > 3: btc_trend = "bullish"
-    elif btc_24h < -3: btc_trend = "bearish"
-    else: btc_trend = "neutral"
-    return {"btc_24h": btc_24h, "eth_24h": eth_24h, "btc_trend": btc_trend}
-
-COINGECKO_ID_MAP = {
-    "btc": "bitcoin", "eth": "ethereum", "sol": "solana", "bnb": "binancecoin",
-    "xrp": "ripple", "doge": "dogecoin", "ada": "cardano", "matic": "matic-network",
-    "pol": "matic-network", "dot": "polkadot", "avax": "avalanche-2",
-    "link": "chainlink", "uni": "uniswap", "ltc": "litecoin", "trx": "tron",
-    "ton": "the-open-network", "shib": "shiba-inu", "pepe": "pepe", "floki": "floki",
-    "wif": "dogwifcoin", "bonk": "bonk", "sui": "sui", "apt": "aptos",
-    "near": "near", "atom": "cosmos", "xlm": "stellar", "vet": "vechain",
-    "fil": "filecoin", "etc": "ethereum-classic", "hbar": "hedera-hashgraph",
-    "icp": "internet-computer", "kas": "kaspa", "inj": "injective-protocol",
-    "rune": "thorchain", "ldo": "lido-dao", "arb": "arbitrum", "op": "optimism",
-    "aave": "aave", "mkr": "maker", "crv": "curve-dao-token",
-}
-
+# ===== CoinGecko =====
 def get_coin_context(symbol):
-    base = symbol.replace("USDT", "").lower()
-    cg_id = COINGECKO_ID_MAP.get(base, base)
-    data = cg_get(f"/coins/{cg_id}", {
-        "localization": "false", "tickers": "false", "community_data": "false",
-        "developer_data": "false", "sparkline": "false",
-    }, ttl=900)
-    if not data or "market_data" not in data: return None
-    md = data["market_data"]
-    return {
-        "rank": data.get("market_cap_rank"),
-        "mcap": md.get("market_cap", {}).get("usd"),
-        "change_24h": md.get("price_change_percentage_24h", 0) or 0,
-        "change_7d": md.get("price_change_percentage_7d", 0) or 0,
-        "change_30d": md.get("price_change_percentage_30d", 0) or 0,
-    }
+    """Return CoinGecko context for a symbol: 30d change and market cap rank."""
+    global CG_CACHE, CG_RATE_LIMITED_UNTIL
+    if CG_RATE_LIMITED_UNTIL > time.time():
+        return None
+    if symbol in CG_CACHE:
+        return CG_CACHE[symbol]
+    try:
+        if CG_KEY:
+            r = requests.get(f"{CG_BASE}/coins/markets", params={"vs_currency": "usd", "ids": symbol.lower(), "order": "market_cap_desc", "per_page": 1, "page": 1, "sparkline": False}, timeout=10)
+        else:
+            r = requests.get(f"{CG_BASE}/coins/markets", params={"vs_currency": "usd", "ids": symbol.lower(), "order": "market_cap_desc", "per_page": 1, "page": 1, "sparkline": False}, timeout=10)
+        data = r.json()
+        if not data:
+            return None
+        coin = data[0]
+        CG_CACHE[symbol] = {
+            "change_30d": coin.get("price_change_percentage_30d", 0),
+            "rank": coin.get("market_cap_rank", None),
+        }
+        return CG_CACHE[symbol]
+    except Exception as e:
+        print(f"CoinGecko error {symbol}: {e}")
+        return None
 
 # ===== Indicators =====
 def rsi(closes, period=14):
-    if len(closes) < period + 1: return None
-    gains, losses = [], []
-    for i in range(1, len(closes)):
-        diff = closes[i] - closes[i-1]
-        gains.append(max(diff, 0)); losses.append(max(-diff, 0))
-    avg_gain = sum(gains[-period:]) / period
-    avg_loss = sum(losses[-period:]) / period
-    if avg_loss == 0: return 100.0
-    rs = avg_gain / avg_loss
+    """RSI indicator."""
+    if len(closes) < period + 1:
+        return None
+    deltas = [closes[i] - closes[i - 1] for i in range(1, len(closes))]
+    ups = sum(d for d in deltas if d > 0)
+    downs = sum(-d for d in deltas if d < 0)
+    rs = ups / downs if downs != 0 else 0
     return 100 - (100 / (1 + rs))
 
-def ema(values, period):
-    if not values: return None
+def ema(data, period=9):
+    """Exponential Moving Average."""
+    if len(data) < period:
+        return None
     k = 2 / (period + 1)
-    ema_val = values[0]
-    for v in values[1:]:
-        ema_val = v * k + ema_val * (1 - k)
+    ema_val = data[:period].mean()
+    for price in data[period:]:
+        ema_val = price * k + ema_val * (1 - k)
     return ema_val
 
-def bollinger(closes, period=20, std_mult=2):
-    if len(closes) < period: return None, None, None
-    sma = sum(closes[-period:]) / period
-    variance = sum((c - sma) ** 2 for c in closes[-period:]) / period
-    std = variance ** 0.5
-    return sma + std_mult * std, sma, sma - std_mult * std
+def bollinger(closes, period=20, std_dev=2):
+    """Bollinger Bands."""
+    if len(closes) < period:
+        return None, None, None
+    sma = ema(closes, period)
+    if sma is None:
+        return None, None, None
+    std = (sum((x - sma) ** 2 for x in closes[-period:]) / period) ** 0.5
+    upper = sma + std_dev * std
+    lower = sma - std_dev * std
+    return upper, sma, lower
 
 def atr(highs, lows, closes, period=14):
-    if len(closes) < period + 1: return None
-    trs = [max(highs[i] - lows[i], abs(highs[i] - closes[i-1]), abs(lows[i] - closes[i-1])) for i in range(1, len(closes))]
+    """Average True Range."""
+    if len(highs) < period:
+        return None
+    trs = []
+    for i in range(1, len(highs)):
+        hl = highs[i] - lows[i]
+        hc = abs(highs[i] - closes[i - 1])
+        lc = abs(lows[i] - closes[i - 1])
+        tr = max(hl, hc, lc)
+        trs.append(tr)
+    if not trs:
+        return None
     return sum(trs[-period:]) / period
 
-def volume_spike(volumes, period=20):
-    if len(volumes) < period: return 1.0
-    avg = sum(volumes[-period:-1]) / (period - 1)
-    return volumes[-1] / avg if avg > 0 else 1.0
+def volume_spike(volumes):
+    """Volume spike detection: 2x average of last 20."""
+    if len(volumes) < 20:
+        return 1.0
+    avg = sum(volumes[-20:]) / 20
+    if avg == 0:
+        return 1.0
+    return volumes[-1] / avg
 
-# ===== Signal scoring =====
 def score_setup(indicators):
-    score = 0.0; reasons = []
-    rsi_v = indicators["rsi"]
-    if rsi_v is not None:
-        if rsi_v < 25: score += 0.35; reasons.append(f"RSI extreme low {rsi_v:.1f}")
-        elif rsi_v < 35: score += 0.2; reasons.append(f"RSI low {rsi_v:.1f}")
-        elif rsi_v > 75: score += 0.35; reasons.append(f"RSI extreme high {rsi_v:.1f}")
-        elif rsi_v > 65: score += 0.2; reasons.append(f"RSI high {rsi_v:.1f}")
-    if indicators["ema_trend"] == "up": score += 0.15; reasons.append("EMA uptrend")
-    elif indicators["ema_trend"] == "down": score += 0.15; reasons.append("EMA downtrend")
-    bb_pos = indicators["bb_position"]
-    if bb_pos == "below_lower": score += 0.2; reasons.append("below BB lower")
-    elif bb_pos == "above_upper": score += 0.2; reasons.append("above BB upper")
-    if indicators["volume_ratio"] > 2.0: score += 0.15; reasons.append(f"vol spike {indicators['volume_ratio']:.1f}x")
-    if abs(indicators["momentum_1h"]) > 2: score += 0.1; reasons.append(f"1h mom {indicators['momentum_1h']:+.1f}%")
-    if indicators.get("cg_30d") is not None:
-        cg_30d = indicators["cg_30d"]
-        if indicators["ema_trend"] == "up" and cg_30d > 10: score += 0.1; reasons.append(f"30d up {cg_30d:+.0f}%")
-        elif indicators["ema_trend"] == "down" and cg_30d < -10: score += 0.1; reasons.append(f"30d down {cg_30d:+.0f}%")
-    if indicators.get("cg_mcap_rank") is not None:
-        rank = indicators["cg_mcap_rank"]
-        if rank and rank <= 100: score += 0.05; reasons.append(f"top-100 (rank {rank})")
-        elif rank and rank > 500: score -= 0.1; reasons.append(f"low rank {rank}")
+    """Score a coin setup (0.0–1.0)."""
+    score = 0.0
+    reasons = []
+
+    # RSI: oversold (<30) or overbought (>70) is good for reversal
+    rsi_v = indicators.get("rsi", 50)
+    if rsi_v < 30:
+        score += 0.20
+        reasons.append("RSI oversold")
+    elif rsi_v > 70:
+        score += 0.20
+        reasons.append("RSI overbought")
+
+    # EMA trend: up is good for LONG, down is good for SHORT
+    ema_trend = indicators.get("ema_trend", "neutral")
+    if ema_trend == "up":
+        score += 0.15
+        reasons.append("EMA up")
+    elif ema_trend == "down":
+        score -= 0.15
+        reasons.append("EMA down")
+
+    # Bollinger position: middle is neutral, above/below extremes is good
+    bb_pos = indicators.get("bb_position", "middle")
+    if bb_pos == "above_upper":
+        score += 0.10
+        reasons.append("BB above upper")
+    elif bb_pos == "below_lower":
+        score += 0.10
+        reasons.append("BB below lower")
+
+    # Volume spike: 2x+ average is good
+    vol_ratio = indicators.get("volume_ratio", 1.0)
+    if vol_ratio >= 2.0:
+        score += 0.15
+        reasons.append("Volume spike")
+    elif vol_ratio >= 1.5:
+        score += 0.10
+        reasons.append("Volume high")
+
+    # Momentum 1h: strong move is good
+    mom_1h = indicators.get("momentum_1h", 0)
+    if abs(mom_1h) >= 1.0:
+        score += 0.10
+        reasons.append(f"Momentum {mom_1h:+.1f}%")
+
+    # BTC context: if BTC is crashing, be cautious
+    btc_24h = indicators.get("btc_24h", 0)
+    if btc_24h < -2.0:
+        score -= 0.10
+        reasons.append("BTC down >2%")
+    elif btc_24h > 2.0:
+        score += 0.10
+        reasons.append("BTC up >2%")
+
+    # Cap at 1.0, floor at 0.0
+    score = max(0.0, min(1.0, score))
     return score, reasons
 
 def market_allows_side(side, market_ctx):
-    if not market_ctx: return True, ""
-    btc_trend = market_ctx.get("btc_trend", "neutral")
+    """Check if market allows LONG or SHORT (no BTC crash for LONG, no BTC pump for SHORT)."""
     btc_24h = market_ctx.get("btc_24h", 0)
-    if btc_trend == "bearish" and side == "LONG" and btc_24h < -2:
-        return False, f"blocked: BTC bearish ({btc_24h:+.1f}% 24h)"
-    if btc_trend == "bullish" and side == "SHORT" and btc_24h > 2:
-        return False, f"blocked: BTC bullish ({btc_24h:+.1f}% 24h)"
-    return True, ""
+    if side == "LONG" and btc_24h < -2.0:
+        return False, "BTC down >2% (LONG not allowed)"
+    if side == "SHORT" and btc_24h > 2.0:
+        return False, "BTC up >2% (SHORT not allowed)"
+    return True, "OK"
 
 def gemini_decide(symbol, side, indicators, market_ctx):
-    ctx_line = ""
-    if market_ctx: ctx_line = f" Market: BTC {market_ctx.get('btc_24h', 0):+.1f}% 24h, trend {market_ctx.get('btc_trend')}."
-    prompt = f"""You are a strict trading filter. Setup: {side} {symbol}. Indicators: RSI {indicators['rsi']:.1f}, EMA trend {indicators['ema_trend']}, BB position {indicators['bb_position']}, volume ratio {indicators['volume_ratio']:.2f}x, 1h momentum {indicators['momentum_1h']:+.2f}%.{ctx_line} Reply ONLY 'YES' or 'NO'."""
+    """Ask Gemini 2.0 Flash for YES/NO on a signal."""
+    prompt = f"""Given the following crypto setup, should we take a {side} position on {symbol}? Answer YES or NO.
+
+Indicators:
+- RSI: {indicators.get('rsi', 50)}
+- EMA trend: {indicators.get('ema_trend', 'neutral')}
+- Bollinger position: {indicators.get('bb_position', 'middle')}
+- Volume ratio: {indicators.get('volume_ratio', 1.0)}
+- 1h momentum: {indicators.get('momentum_1h', 0)}%
+- BTC 24h: {market_ctx.get('btc_24h', 0)}%
+
+Answer YES or NO."""
     try:
         r = requests.post(f"{GEMINI_URL}?key={GEMINI_KEY}", json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=20)
         reply = r.json()["candidates"][0]["content"]["parts"][0]["text"].strip().upper()
@@ -533,15 +551,15 @@ def check_outcomes(open_signals):
         for k in klines[-5:]:
             high = float(k[2]); low = float(k[3])
             if sig["side"] == "LONG":
-                if low <= sig["sl"]: new_status = "CLOSED_LOSS"; break
-                if high >= sig["tp3"]: new_status = "CLOSED_WIN_TP3"; break
-                if high >= sig["tp2"]: new_status = "CLOSED_WIN_TP2"; break
-                if high >= sig["tp1"]: new_status = "CLOSED_WIN_TP1"; break
+            if low <= sig["sl"]: new_status = "CLOSED_LOSS"; break
+            if high >= sig["tp3"]: new_status = "CLOSED_WIN_TP3"; break
+            if high >= sig["tp2"]: new_status = "CLOSED_WIN_TP2"; break
+            if high >= sig["tp1"]: new_status = "CLOSED_WIN_TP1"; break
             else:
-                if high >= sig["sl"]: new_status = "CLOSED_LOSS"; break
-                if low <= sig["tp3"]: new_status = "CLOSED_WIN_TP3"; break
-                if low <= sig["tp2"]: new_status = "CLOSED_WIN_TP2"; break
-                if low <= sig["tp1"]: new_status = "CLOSED_WIN_TP1"; break
+            if high >= sig["sl"]: new_status = "CLOSED_LOSS"; break
+            if low <= sig["tp3"]: new_status = "CLOSED_WIN_TP3"; break
+            if low <= sig["tp2"]: new_status = "CLOSED_WIN_TP2"; break
+            if low <= sig["tp1"]: new_status = "CLOSED_WIN_TP1"; break
         if new_status != old_status:
             sig["status"] = new_status
             sig["closed_at"] = datetime.now(timezone.utc).isoformat()
@@ -558,82 +576,57 @@ def load_signals():
     except: return []
 
 def save_signals(sigs):
-    os.makedirs(os.path.dirname(STATE_FILE), exist_ok=True)
-    with open(STATE_FILE, "w") as f: json.dump(sigs, f, indent=2)
+    if not os.path.exists(os.path.dirname(STATE_FILE)):
+        os.makedirs(os.path.dirname(STATE_FILE), exist_ok=True)
+    with open(STATE_FILE, "w") as f:
+        json.dump(sigs, f, indent=2)
 
-def broadcast(sig):
-    trigger = sig.get("trigger", "24h")
-    ch_show = sig.get("ch1h") if trigger == "1h" else sig.get("ch24")
-    msg = f"""{'🟢' if sig['side']=='LONG' else '🔴'} <b>{sig['side']} {sig['symbol']}</b> <i>({trigger}: {ch_show:+.1f}%)</i>
-Entry: <code>{sig['entry']:.6f}</code>
-SL: <code>{sig['sl']:.6f}</code>
-TP1: <code>{sig['tp1']:.6f}</code>
-TP2: <code>{sig['tp2']:.6f}</code>
-TP3: <code>{sig['tp3']:.6f}</code>
-Score: {sig['score']:.2f}
-💡 {', '.join(sig['reasons'])}"""
-    if sig.get("btc_context"):
-        btc = sig["btc_context"]
-        msg += f"\n🌐 BTC {btc.get('btc_24h', 0):+.1f}% (24h), trend {btc.get('btc_trend', 'n/a')}"
-    tg_send(msg)
-    print(f"Broadcasted: {sig['side']} {sig['symbol']} @ {sig['entry']:.6f}")
+def broadcast_signals(signals, to_admin=False):
+    """Broadcast signals to Telegram."""
+    if not signals:
+        return
+    text = "<b>🚀 TA-BOT ML SIGNALS</b>\n\n"
+    for sig in signals:
+        side = sig.get("side", "")
+        symbol = sig.get("symbol", "")
+        entry = sig.get("entry", 0)
+        sl = sig.get("sl", 0)
+        tp1 = sig.get("tp1", 0)
+        tp2 = sig.get("tp2", 0)
+        tp3 = sig.get("tp3", 0)
+        score = sig.get("score", 0)
+        reasons = sig.get("reasons", [])
+        ch24 = sig.get("ch24", 0)
+        ch1h = sig.get("ch1h", 0)
+        threshold = sig.get("threshold", 0)
+        text += f"\n<b>{side}</b> {symbol}\n"
+        text += f"Entry: {entry:.6f} | SL: {sl:.6f} | TP1: {tp1:.6f} | TP2: {tp2:.6f} | TP3: {tp3:.6f}\n"
+        text += f"Score: {score:.2f} | Threshold: {threshold}% | 24h: {ch24:+.2f}% | 1h: {ch1h:+.2f}%\n"
+        if reasons:
+            text += f"Reasons: {', '.join(reasons)}\n"
+    tg_send(text, to_admin)
+
+def get_btc_eth_context():
+    """Get BTC and ETH 24h context."""
+    btc_ctx = get_coin_context("bitcoin")
+    eth_ctx = get_coin_context("ethereum")
+    btc_24h = btc_ctx.get("change_30d", 0) if btc_ctx else 0
+    btc_trend = "up" if btc_24h > 0 else "down" if btc_24h < 0 else "neutral"
+    return {"btc_24h": btc_24h, "btc_trend": btc_trend}
+
+def main():
+    signals = scan_market()
+    if signals:
+        broadcast_signals(signals)
+        save_signals(signals)
+    open_signals = load_signals()
+    updated = check_outcomes(open_signals)
+    if updated:
+        broadcast_signals(updated, to_admin=True)
+        save_signals(updated)
+        print(f"Updated {len(updated)} signals")
+    # Optional: send bandit report to admin
+    # print(bandit_report())
 
 if __name__ == "__main__":
-    print(f"MEXC keys: {'set' if MEXC_SECRET and MEXC_ACCESS else 'NOT set'}")
-    print(f"CoinGecko key: {'set' if CG_KEY else 'NOT set'}")
-    if MEXC_SECRET and MEXC_ACCESS:
-        server_time = get_mexc_server_time()
-        print(f"MEXC server time: {server_time} (signed endpoint available)")
-
-    all_signals = load_signals()
-
-    # Time-based timeout: signals open > 24h are marked TIMEOUT (bandit penalty)
-    now_ts = time.time()
-    timed_out = 0
-    for s in all_signals:
-        if s.get("status") != "OPEN":
-            continue
-        try:
-            sig_ts = datetime.fromisoformat(s["ts"].replace("Z", "+00:00")).timestamp()
-        except Exception:
-            continue
-        if (now_ts - sig_ts) > 24 * 3600:
-            s["status"] = "TIMEOUT"
-            s["closed_at"] = datetime.now(timezone.utc).isoformat()
-            t = s.get("threshold")
-            if t is not None:
-                update_bandit(t, "TIMEOUT")
-            timed_out += 1
-    if timed_out:
-        print(f"Timed out {timed_out} stale signal(s)")
-
-    open_signals = [s for s in all_signals if s["status"] == "OPEN"]
-    if open_signals:
-        open_signals = check_outcomes(open_signals)
-        closed = sum(1 for s in open_signals if s["status"] != "OPEN")
-        if closed: print(f"Closed {closed} signal(s)")
-
-    new_signals = scan_market()
-    for sig in new_signals: broadcast(sig)
-    if not new_signals and ADMIN_CHAT:
-        try:
-            btc_ctx = get_btc_eth_context()
-            tg_send(f"🟡 Bot run: 0 signals. Market quiet (BTC {btc_ctx.get('btc_24h', 0):+.2f}%, trend {btc_ctx.get('btc_trend')}). Bot working as designed.", to_admin=True)
-        except Exception as e:
-            print(f"admin ping failed: {e}")
-    by_id = {s["id"]: s for s in all_signals}
-    for s in open_signals:
-        by_id[s["id"]] = s
-    for s in new_signals:
-        by_id[s["id"]] = s
-    merged = list(by_id.values())
-    save_signals(merged)
-
-    report = bandit_report()
-    print(report)
-    if ADMIN_CHAT:
-        try:
-            tg_send("Bandit report:\n" + report, to_admin=True)
-        except Exception as e:
-            print(f"bandit report send failed: {e}")
-    print("Done.")
+    main()
