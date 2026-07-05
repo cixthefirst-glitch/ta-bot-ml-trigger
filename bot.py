@@ -26,7 +26,7 @@ MEXC_ACCESS = os.environ.get("MEXC_ACCESS_KEY", "")
 CG_KEY = os.environ.get("COINGECKO_API_KEY", "")
 
 # Only consider the top N coins by 24h quote volume to keep API calls manageable
-TOP_N_BY_VOLUME = 400
+TOP_N_BY_VOLUME = 1000
 MAX_WORKERS = 10  # parallel 1h change fetches
 
 # ===== Telegram =====
@@ -344,6 +344,110 @@ def scan_market():
     if skipped_lowhist:
         print(f"  {skipped_lowhist} skipped (insufficient history <50 1h klines)")
     candidates = pre_filtered
+    for t, ch24, ch1h in candidates:
+        symbol = t["symbol"]
+        klines = get_klines(symbol)
+        if len(klines) < 50: print(f"  {symbol} -> skipped: <50 klines"); continue
+        closes = [float(k[4]) for k in klines]
+        highs = [float(k[2]) for k in klines]
+        lows = [float(k[3]) for k in klines]
+        volumes = [float(k[5]) for k in klines]
+        last_close = closes[-1]
+        rsi_v = rsi(closes) or 50
+        ema9 = ema(closes[-30:], 9)
+        ema21 = ema(closes[-60:], 21)
+        ema_trend = "up" if ema9 > ema21 else "down"
+        bb_u, bb_m, bb_l = bollinger(closes)
+        bb_position = "above_upper" if last_close > bb_u else "below_lower" if last_close < bb_l else "middle"
+        atr_v = atr(highs, lows, closes) or (last_close * 0.02)
+        vol_ratio = volume_spike(volumes)
+        mom_1h = ((closes[-1] - closes[-2]) / closes[-2] * 100) if len(closes) > 1 else 0
+        indicators = {
+            "rsi": rsi_v, "ema_trend": ema_trend, "bb_position": bb_position,
+            "volume_ratio": vol_ratio, "momentum_1h": mom_1h,
+            "cg_30d": None, "cg_mcap_rank": None,
+        }
+        if cg_calls < 5:
+            cg_data = get_coin_context(symbol)
+            if cg_data:
+                indicators["cg_30d"] = cg_data.get("change_30d")
+                indicators["cg_mcap_rank"] = cg_data.get("rank")
+                cg_calls += 1
+        score, reasons = score_setup(indicators)
+        if score < 0.10: print(f"  {symbol} -> score {score:.2f} (need 0.10+): {reasons}"); continue  # lowered 0.15->0.10 on 2026-07-03 for more volume
+        side = "LONG" if (rsi_v < 50 or ema_trend == "up") else "SHORT"
+        allowed, block_reason = market_allows_side(side, market_ctx)
+        if not allowed: print(f"  {symbol} {side} -> {block_reason}"); continue
+        if not gemini_decide(symbol, side, indicators, market_ctx): print(f"  {symbol} {side} -> Gemini rejected"); continue
+        if side == "LONG":
+            sl = last_close - atr_v * 1.5
+            tp1 = last_close + atr_v * 1.0; tp2 = last_close + atr_v * 2.0; tp3 = last_close + atr_v * 3.0
+        else:
+            sl = last_close + atr_v * 1.5
+            tp1 = last_close - atr_v * 1.0; tp2 = last_close - atr_v * 2.0; tp3 = last_close - atr_v * 3.0
+        relevant_ch = ch1h if ch1h is not None else ch24
+        sig = {
+            "id": f"{symbol}_{int(time.time())}",
+            "ts": datetime.now(timezone.utc).isoformat(),
+            "symbol": symbol, "side": side, "entry": last_close,
+            "sl": sl, "tp1": tp1, "tp2": tp2, "tp3": tp3,
+            "score": score, "reasons": reasons,
+            "indicators": {k: v for k, v in indicators.items() if k != "cg_30d" or v is not None},
+            "btc_context": {"btc_24h": market_ctx.get("btc_24h"), "btc_trend": market_ctx.get("btc_trend")},
+            "trigger": "1h" if ch1h is not None else "24h",
+            "ch24": ch24, "ch1h": ch1h,
+            "status": "OPEN",
+        }
+        signals.append(sig)
+    print(f"Generated {len(signals)} signals (CG calls used: {cg_calls})")
+    return signals
+
+def check_outcomes(open_signals):
+    updated = []
+    for sig in open_signals:
+        symbol = sig["symbol"]
+        old_status = sig.get("status", "OPEN")
+        klines = get_klines(symbol, limit=10)
+        if not klines: updated.append(sig); continue
+        new_status = old_status
+        for k in klines[-5:]:
+            high = float(k[2]); low = float(k[3])
+            if sig["side"] == "LONG":
+                if low <= sig["sl"]: new_status = "CLOSED_LOSS"; break
+                if high >= sig["tp3"]: new_status = "CLOSED_WIN_TP3"; break
+                if high >= sig["tp2"]: new_status = "CLOSED_WIN_TP2"; break
+                if high >= sig["tp1"]: new_status = "CLOSED_WIN_TP1"; break
+            else:
+                if high >= sig["sl"]: new_status = "CLOSED_LOSS"; break
+                if low <= sig["tp3"]: new_status = "CLOSED_WIN_TP3"; break
+                if low <= sig["tp2"]: new_status = "CLOSED_WIN_TP2"; break
+                if low <= sig["tp1"]: new_status = "CLOSED_WIN_TP1"; break
+        if new_status != old_status:
+            sig["status"] = new_status
+            sig["closed_at"] = datetime.now(timezone.utc).isoformat()
+        updated.append(sig)
+    return updated
+
+def load_signals():
+    if not os.path.exists(STATE_FILE): return []
+    try:
+        with open(STATE_FILE) as f: return json.load(f)
+    except: return []
+
+def save_signals(sigs):
+    if not os.path.exists(os.path.dirname(STATE_FILE)):
+        os.makedirs(os.path.dirname(STATE_FILE), exist_ok=True)
+    with open(STATE_FILE, "w") as f:
+        json.dump(sigs, f, indent=2)
+
+def broadcast_signals(signals, to_admin=False):
+    """Broadcast signals to Telegram."""
+    if not signals:
+        return
+    text = "<b>🚀 TA-BOT ML SIGNALS</b>\n\n"
+    for sig in signals:
+        side = sig.get("side", "")
+        symbol =_N_BY_VOLUME = 1000
     for t, ch24, ch1h in candidates:
         symbol = t["symbol"]
         klines = get_klines(symbol)
