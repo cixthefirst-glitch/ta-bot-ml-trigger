@@ -181,5 +181,188 @@
     "ch1h": null,
     "gemini": "advisory_unavailable",
     "status": "OPEN"
+  },
+  {
+    "id": "HEMI_USDT_1783382153",
+    "ts": "2026-07-06T23:55:53.808633+00:00",
+    "symbol": "HEMI_USDT",
+    "side": "LONG",
+    "entry": 0.004921,
+    "sl": 0.004751285714285714,
+    "tp1": 0.005034142857142857,
+    "tp2": 0.0051472857142857145,
+    "tp3": 0.005260428571428571,
+    "score": 0.5356,
+    "reasons": [
+      "base",
+      "EMA up",
+      "Volume spike",
+      "Momentum -2.4%"
+    ],
+    "indicators": {
+      "rsi": 52.15326155794807,
+      "ema_trend": "up",
+      "bb_position": "middle",
+      "volume_ratio": 2.1438015336907137,
+      "momentum_1h": -2.438540840602693,
+      "btc_24h": 0.8470219281005177,
+      "funding_rate": 0,
+      "cg_mcap_rank": null
+    },
+    "btc_context": {
+      "btc_24h": 0.8470219281005177,
+      "btc_trend": "up"
+    },
+    "trigger": "24h",
+    "ch24": 4.03,
+    "ch1h": null,
+    "gemini": "advisory_unavailable",
+    "status": "OPEN"
+  },
+  {
+    "id": "HYUNDAISTOCK_USDT_1783382153",
+    "ts": "2026-07-06T23:55:53.934575+00:00",
+    "symbol": "HYUNDAISTOCK_USDT",
+    "side": "LONG",
+    "entry": 323.64,
+    "sl": 319.86642857142857,
+    "tp1": 326.1557142857143,
+    "tp2": 328.6714285714286,
+    "tp3": 331.1871428571429,
+    "score": 0.5356,
+    "reasons": [
+      "base",
+      "EMA up",
+      "Volume spike",
+      "Momentum -1.4%"
+    ],
+    "indicators": {
+      "rsi": 55.09077963688144,
+      "ema_trend": "up",
+      "bb_position": "middle",
+      "volume_ratio": 3.9664191152728447,
+      "momentum_1h": -1.4344449520329028,
+      "btc_24h": 0.8470219281005177,
+      "funding_rate": 0,
+      "cg_mcap_rank": null
+    },
+    "btc_context": {
+      "btc_24h": 0.8470219281005177,
+      "btc_trend": "up"
+    },
+    "trigger": "24h",
+    "ch24": -2.32,
+    "ch1h": null,
+    "gemini": "advisory_unavailable",
+    "status": "OPEN"
+  },
+  {
+    "id": "VSTSTOCK_USDT_1783382154",
+    "ts": "2026-07-06T23:55:54.057744+00:00",
+    "symbol": "VSTSTOCK_USDT",
+    "side": "LONG",
+    "entry": 157.46,
+    "sl": 155.66,
+    "tp1": 158.66000000000003,
+    "tp2": 159.86,
+    "tp3": 161.06,
+    "score": 0.4887,
+    "reasons": [
+      "base",
+      "RSI overbought",
+      "EMA up"
+    ],
+    "indicators": {
+      "rsi": 70.98039215686325,
+      "ema_trend": "up",
+      "bb_position": "middle",
+      "volume_ratio": 0.7147288387459784,
+      "momentum_1h": 0.09535312440404659,
+      "btc_24h": 0.8470219281005177,
+      "funding_rate": 0,
+      "cg_mcap_rank": null
+    },
+    "btc_context": {
+      "btc_24h": 0.8470219281005177,
+      "btc_trend": "up"
+    },
+    "trigger": "24h",
+    "ch24": 2.23,
+    "ch1h": null,
+    "gemini": "advisory_unavailable",
+    "status": "OPEN"
+  },
+  {
+    "id": "GSSTOCK_USDT_1783382154",
+    "ts": "2026-07-06T23:55:54.188891+00:00",
+    "symbol": "GSSTOCK_USDT",
+    "side": "LONG",
+    "entry": 1054.85,
+    "sl": 1041.2021428571427,
+    "tp1": 1063.9485714285713,
+    "tp2": 1073.0471428571427,
+    "tp3": 1082.1457142857141,
+    "score": 0.4887,
+    "reasons": [
+      "base",
+      "RSI overbought",
+      "EMA up"
+    ],
+    "indicators": {
+      "rsi": 71.61577774865691,
+      "ema_trend": "up",
+      "bb_position": "middle",
+      "volume_ratio": 0.6617765165711837,
+      "momentum_1h": -0.049271819361928225,
+      "btc_24h": 0.8470219281005177,
+      "funding_rate": 0,
+      "cg_mcap_rank": null
+    },
+    "btc_context": {
+      "btc_24h": 0.8470219281005177,
+      "btc_trend": "up"
+    },
+    "trigger": "24h",
+    "ch24": 0.27,
+    "ch1h": null,
+    "gemini": "advisory_unavailable",
+    "status": "OPEN"
+  },
+  {
+    "id": "REDO_USDT_1783382154",
+    "ts": "2026-07-06T23:55:54.316548+00:00",
+    "symbol": "REDO_USDT",
+    "side": "LONG",
+    "entry": 0.0857,
+    "sl": 0.07951785714285714,
+    "tp1": 0.08982142857142857,
+    "tp2": 0.09394285714285713,
+    "tp3": 0.09806428571428571,
+    "score": 0.44420000000000004,
+    "reasons": [
+      "base",
+      "EMA up",
+      "BB above upper",
+      "Momentum +3.9%"
+    ],
+    "indicators": {
+      "rsi": 59.094583670169754,
+      "ema_trend": "up",
+      "bb_position": "above_upper",
+      "volume_ratio": 0.9095933224072875,
+      "momentum_1h": 3.878787878787872,
+      "btc_24h": 0.8470219281005177,
+      "funding_rate": 0,
+      "cg_mcap_rank": null
+    },
+    "btc_context": {
+      "btc_24h": 0.8470219281005177,
+      "btc_trend": "up"
+    },
+    "trigger": "24h",
+    "ch24": 14.01,
+    "ch1h": null,
+    "gemini": "advisory_unavailable",
+    "status": "OPEN"
   }
 ]
