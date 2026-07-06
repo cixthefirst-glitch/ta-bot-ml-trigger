@@ -1,203 +1,81 @@
 [
   {
-    "id": "VANRY_USDT_1783345731",
-    "ts": "2026-07-06T13:48:51.395598+00:00",
-    "symbol": "VANRY_USDT",
+    "id": "DELLSTOCK_USDT_1783349028",
+    "ts": "2026-07-06T14:43:48.168844+00:00",
+    "symbol": "DELLSTOCK_USDT",
     "side": "LONG",
-    "entry": 0.009275,
-    "sl": 0.008261964285714286,
-    "tp1": 0.009950357142857143,
-    "tp2": 0.010625714285714285,
-    "tp3": 0.011301071428571428,
-    "score": 0.8313,
+    "entry": 427.12,
+    "sl": 420.05821428571426,
+    "tp1": 431.82785714285717,
+    "tp2": 436.5357142857143,
+    "tp3": 441.24357142857144,
+    "score": 0.5503,
     "reasons": [
       "base",
-      "RSI overbought",
       "EMA up",
       "BB above upper",
       "Volume spike",
-      "Momentum +30.9%"
+      "Momentum +2.0%"
     ],
     "indicators": {
-      "rsi": 71.55226155018356,
+      "rsi": 54.86363285173456,
       "ema_trend": "up",
       "bb_position": "above_upper",
-      "volume_ratio": 4.076049330447947,
-      "momentum_1h": 30.947338698291688,
-      "btc_24h": -1.791389831848418,
+      "volume_ratio": 8.384987985811815,
+      "momentum_1h": 1.976888549326719,
+      "btc_24h": -1.0534610633931383,
       "funding_rate": 0,
       "cg_mcap_rank": null
     },
     "btc_context": {
-      "btc_24h": -1.791389831848418,
+      "btc_24h": -1.0534610633931383,
       "btc_trend": "down"
     },
     "trigger": "24h",
-    "ch24": 73.37,
+    "ch24": 6.800000000000001,
     "ch1h": null,
     "gemini": "advisory_unavailable",
     "status": "CLOSED_LOSS",
-    "close_ts": "2026-07-06T13:48:52.540882+00:00",
-    "close_price": 0.00925
+    "close_ts": "2026-07-06T14:43:49.477683+00:00",
+    "close_price": 427.11
   },
   {
-    "id": "IRENSTOCK_USDT_1783345731",
-    "ts": "2026-07-06T13:48:51.510458+00:00",
-    "symbol": "IRENSTOCK_USDT",
+    "id": "W_USDT_1783349028",
+    "ts": "2026-07-06T14:43:48.290861+00:00",
+    "symbol": "W_USDT",
     "side": "LONG",
-    "entry": 44.02,
-    "sl": 43.02571428571429,
-    "tp1": 44.682857142857145,
-    "tp2": 45.34571428571429,
-    "tp3": 46.00857142857143,
-    "score": 0.6313,
+    "entry": 0.01043,
+    "sl": 0.010156785714285714,
+    "tp1": 0.010612142857142858,
+    "tp2": 0.010794285714285715,
+    "tp3": 0.010976428571428571,
+    "score": 0.5321,
     "reasons": [
       "base",
       "EMA up",
-      "BB above upper",
       "Volume spike",
-      "Momentum +5.1%"
+      "Momentum +1.4%"
     ],
     "indicators": {
-      "rsi": 53.85626643295356,
+      "rsi": 52.85118219749653,
       "ema_trend": "up",
-      "bb_position": "above_upper",
-      "volume_ratio": 3.4223661790010014,
-      "momentum_1h": 5.059665871121729,
-      "btc_24h": -1.791389831848418,
+      "bb_position": "middle",
+      "volume_ratio": 9.400296455498006,
+      "momentum_1h": 1.36054421768707,
+      "btc_24h": -1.0534610633931383,
       "funding_rate": 0,
       "cg_mcap_rank": null
     },
     "btc_context": {
-      "btc_24h": -1.791389831848418,
+      "btc_24h": -1.0534610633931383,
       "btc_trend": "down"
     },
     "trigger": "24h",
-    "ch24": 6.92,
+    "ch24": 3.9800000000000004,
     "ch1h": null,
     "gemini": "advisory_unavailable",
-    "status": "CLOSED_LOSS",
-    "close_ts": "2026-07-06T13:48:52.751374+00:00",
-    "close_price": 44.12
-  },
-  {
-    "id": "RGTISTOCK_USDT_1783345731",
-    "ts": "2026-07-06T13:48:51.615590+00:00",
-    "symbol": "RGTISTOCK_USDT",
-    "side": "LONG",
-    "entry": 18.445,
-    "sl": 18.2155,
-    "tp1": 18.598,
-    "tp2": 18.751,
-    "tp3": 18.904000000000003,
-    "score": 0.6313,
-    "reasons": [
-      "base",
-      "EMA up",
-      "BB above upper",
-      "Volume spike",
-      "Momentum +1.9%"
-    ],
-    "indicators": {
-      "rsi": 48.24665090622537,
-      "ema_trend": "up",
-      "bb_position": "above_upper",
-      "volume_ratio": 2.4650421853796685,
-      "momentum_1h": 1.9004474890890073,
-      "btc_24h": -1.791389831848418,
-      "funding_rate": 0,
-      "cg_mcap_rank": null
-    },
-    "btc_context": {
-      "btc_24h": -1.791389831848418,
-      "btc_trend": "down"
-    },
-    "trigger": "24h",
-    "ch24": 2.56,
-    "ch1h": null,
-    "gemini": "advisory_unavailable",
-    "status": "CLOSED_LOSS",
-    "close_ts": "2026-07-06T13:48:52.931570+00:00",
-    "close_price": 18.449
-  },
-  {
-    "id": "SOFISTOCK_USDT_1783345731",
-    "ts": "2026-07-06T13:48:51.716526+00:00",
-    "symbol": "SOFISTOCK_USDT",
-    "side": "LONG",
-    "entry": 18.92,
-    "sl": 18.69392857142857,
-    "tp1": 19.07071428571429,
-    "tp2": 19.221428571428575,
-    "tp3": 19.372142857142858,
-    "score": 0.6313,
-    "reasons": [
-      "base",
-      "EMA up",
-      "BB above upper",
-      "Volume spike",
-      "Momentum +3.1%"
-    ],
-    "indicators": {
-      "rsi": 55.428571428571395,
-      "ema_trend": "up",
-      "bb_position": "above_upper",
-      "volume_ratio": 3.8944960686204433,
-      "momentum_1h": 3.1062670299727535,
-      "btc_24h": -1.791389831848418,
-      "funding_rate": 0,
-      "cg_mcap_rank": null
-    },
-    "btc_context": {
-      "btc_24h": -1.791389831848418,
-      "btc_trend": "down"
-    },
-    "trigger": "24h",
-    "ch24": 3.56,
-    "ch1h": null,
-    "gemini": "advisory_unavailable",
-    "status": "CLOSED_LOSS",
-    "close_ts": "2026-07-06T13:48:53.102267+00:00",
-    "close_price": 18.92
-  },
-  {
-    "id": "ARMSTOCK_USDT_1783345731",
-    "ts": "2026-07-06T13:48:51.828470+00:00",
-    "symbol": "ARMSTOCK_USDT",
-    "side": "LONG",
-    "entry": 335.96,
-    "sl": 330.39714285714285,
-    "tp1": 339.6685714285714,
-    "tp2": 343.3771428571428,
-    "tp3": 347.08571428571423,
-    "score": 0.6313,
-    "reasons": [
-      "base",
-      "EMA up",
-      "BB above upper",
-      "Volume spike",
-      "Momentum +3.0%"
-    ],
-    "indicators": {
-      "rsi": 52.16773757186336,
-      "ema_trend": "up",
-      "bb_position": "above_upper",
-      "volume_ratio": 3.7608845192356086,
-      "momentum_1h": 3.004660289428487,
-      "btc_24h": -1.791389831848418,
-      "funding_rate": 0,
-      "cg_mcap_rank": null
-    },
-    "btc_context": {
-      "btc_24h": -1.791389831848418,
-      "btc_trend": "down"
-    },
-    "trigger": "24h",
-    "ch24": 3.09,
-    "ch1h": null,
-    "gemini": "advisory_unavailable",
-    "status": "CLOSED_LOSS",
-    "close_ts": "2026-07-06T13:48:53.299645+00:00",
-    "close_price": 335.91
+    "status": "CLOSED_WIN_TP1",
+    "close_ts": "2026-07-06T14:43:49.686603+00:00",
+    "close_price": 0.01041
   }
 ]
