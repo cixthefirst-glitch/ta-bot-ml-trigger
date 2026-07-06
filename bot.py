@@ -84,7 +84,7 @@ def get_top_usdt_tickers(limit=TOP_N_BY_VOLUME):
         except: continue
         if vol <= 0: continue
         usdt.append({"t": t, "vol": vol, "ch24": ch24})
-    usdt.sort(key=lambda x: -x["vol"])
+    usdt.sort(key=lambda x: x["vol"], reverse=True)
     return usdt[:limit]
 
 def get_1h_change(symbol):
@@ -316,7 +316,7 @@ def scan_market():
     # These are freshly-launched tokens that survived the vol filter on a single
     # 24h move but have no price history to analyze.
     pre_filtered = []
-    for cand in candidates[:50]:
+    for cand in candidates:  # scan ALL candidates, not just top 50 (was the bug causing 0 signals)
         sym = cand[0]["symbol"]
         kc = get_klines(sym, limit=50)
         if len(kc) < 50:
@@ -356,7 +356,7 @@ def scan_market():
                 indicators["cg_mcap_rank"] = cg_data.get("rank")
                 cg_calls += 1
         score, reasons = score_setup(indicators)
-        if score < 0.10: print(f"  {symbol} -> score {score:.2f} (need 0.10+): {reasons}"); continue  # lowered 0.15->0.10 on 2026-07-03 for more volume
+        if score < 0.05: print(f"  {symbol} -> score {score:.2f} (need 0.05+): {reasons}"); continue  # lowered 0.10->0.05 on 2026-07-06 for more volume; was getting 0 signals
         side = "LONG" if (rsi_v < 50 or ema_trend == "up") else "SHORT"
         allowed, block_reason = market_allows_side(side, market_ctx)
         if not allowed: print(f"  {symbol} {side} -> {block_reason}"); continue
@@ -388,26 +388,33 @@ def check_outcomes(open_signals):
     updated = []
     for sig in open_signals:
         symbol = sig["symbol"]
-        old_status = sig.get("status", "OPEN")
-        klines = get_klines(symbol, limit=10)
-        if not klines: updated.append(sig); continue
-        new_status = old_status
-        for k in klines[-5:]:
-            high = float(k[2]); low = float(k[3])
-            if sig["side"] == "LONG":
-                if low <= sig["sl"]: new_status = "CLOSED_LOSS"; break
-                if high >= sig["tp3"]: new_status = "CLOSED_WIN_TP3"; break
-                if high >= sig["tp2"]: new_status = "CLOSED_WIN_TP2"; break
-                if high >= sig["tp1"]: new_status = "CLOSED_WIN_TP1"; break
-            else:
-                if high >= sig["sl"]: new_status = "CLOSED_LOSS"; break
-                if low <= sig["tp3"]: new_status = "CLOSED_WIN_TP3"; break
-                if low <= sig["tp2"]: new_status = "CLOSED_WIN_TP2"; break
-                if low <= sig["tp1"]: new_status = "CLOSED_WIN_TP1"; break
-        if new_status != old_status:
+        old_status = sig.get("status")
+        # already closed
+        if old_status in ("CLOSED_WIN_TP1", "CLOSED_WIN_TP2", "CLOSED_WIN_TP3", "CLOSED_LOSS", "EXPIRED"):
+            continue
+        side = sig["side"]
+        entry = sig["entry"]
+        sl = sig["sl"]; tp1 = sig["tp1"]; tp2 = sig["tp2"]; tp3 = sig["tp3"]
+        klines = get_klines(symbol, interval="1h", limit=2)
+        if len(klines) < 2: continue
+        # last closed candle
+        h = float(klines[-1][2]); l = float(klines[-1][3]); c = float(klines[-1][4])
+        new_status = None
+        if side == "LONG":
+            if h >= tp3: new_status = "CLOSED_WIN_TP3"
+            elif h >= tp2: new_status = "CLOSED_WIN_TP2"
+            elif h >= tp1: new_status = "CLOSED_WIN_TP1"
+            elif l <= sl: new_status = "CLOSED_LOSS"
+        else:  # SHORT
+            if l <= tp3: new_status = "CLOSED_WIN_TP3"
+            elif l <= tp2: new_status = "CLOSED_WIN_TP2"
+            elif l <= tp1: new_status = "CLOSED_WIN_TP1"
+            elif h >= sl: new_status = "CLOSED_LOSS"
+        if new_status:
             sig["status"] = new_status
-            sig["closed_at"] = datetime.now(timezone.utc).isoformat()
-        updated.append(sig)
+            sig["close_ts"] = datetime.now(timezone.utc).isoformat()
+            sig["close_price"] = c
+            updated.append(sig)
     return updated
 
 def load_signals():
@@ -417,44 +424,44 @@ def load_signals():
     except: return []
 
 def save_signals(sigs):
-    if not os.path.exists(os.path.dirname(STATE_FILE)):
-        os.makedirs(os.path.dirname(STATE_FILE), exist_ok=True)
+    os.makedirs("data", exist_ok=True)
     with open(STATE_FILE, "w") as f:
-        json.dump(sigs, f, indent=2)
+        json.dump(sigs, f, indent=2, default=str)
 
 def broadcast_signals(signals, to_admin=False):
     """Broadcast signals to Telegram."""
     if not signals:
+        if to_admin: tg_send("0 signals updated this run.", to_admin=True)
         return
     text = "<b>🚀 TA-BOT ML SIGNALS</b>\n\n"
     for sig in signals:
-        side = sig.get("side", "")
-        symbol = sig.get("symbol", "")
-        entry = sig.get("entry", 0)
-        sl = sig.get("sl", 0)
-        tp1 = sig.get("tp1", 0)
-        tp2 = sig.get("tp2", 0)
-        tp3 = sig.get("tp3", 0)
-        score = sig.get("score", 0)
-        reasons = sig.get("reasons", [])
-        ch24 = sig.get("ch24", 0)
-        ch1h = sig.get("ch1h", 0)
-        text += f"\n<b>{side}</b> {symbol}\n"
-        text += f"Entry: {entry:.6f} | SL: {sl:.6f} | TP1: {tp1:.6f} | TP2: {tp2:.6f} | TP3: {tp3:.6f}\n"
-        text += f"Score: {score:.2f} | 24h: {ch24:+.2f}% | 1h: {ch1h:+.2f}%\n"
-        if reasons:
-            text += f"Reasons: {', '.join(reasons)}\n"
-    tg_send(text, to_admin)
+        if "close_price" in sig:  # outcome update
+            emoji = "✅" if "WIN" in sig["status"] else "❌"
+            text += f"{emoji} <b>{sig['side']} {sig['symbol']}</b> → {sig['status']}\n"
+            text += f"Entry: {sig['entry']:.6g} → Close: {sig['close_price']:.6g}\n\n"
+        else:  # new signal
+            emoji = "🟢" if sig["side"] == "LONG" else "🔴"
+            text += f"{emoji} <b>{sig['side']} {sig['symbol']}</b> ({sig['trigger']}: {sig.get('ch24', 0) or sig.get('ch1h', 0):+.1f}%)\n"
+            text += f"Entry: {sig['entry']:.6g} | SL: {sig['sl']:.6g}\n"
+            text += f"TP1: {sig['tp1']:.6g} | TP2: {sig['tp2']:.6g} | TP3: {sig['tp3']:.6g}\n"
+            text += f"Score: {sig['score']:.2f} ({', '.join(sig['reasons'])})\n\n"
+    tg_send(text, to_admin=to_admin)
 
 def get_btc_eth_context():
-    """Get BTC and ETH 24h context."""
-    btc_ctx = get_coin_context("bitcoin")
-    eth_ctx = get_coin_context("ethereum")
-    btc_24h = btc_ctx.get("change_30d", 0) if btc_ctx else 0
-    btc_trend = "up" if btc_24h > 0 else "down" if btc_24h < 0 else "neutral"
-    return {"btc_24h": btc_24h, "btc_trend": btc_trend}
+    """Get BTC and ETH 24h change from CoinGecko."""
+    if not CG_KEY: return {"btc_24h": 0, "eth_24h": 0, "btc_trend": "neutral"}
+    try:
+        r = requests.get(f"{CG_BASE}/simple/price",
+                         params={"ids": "bitcoin,ethereum", "vs_currencies": "usd", "include_24hr_change": "true"},
+                         headers={"x-cg-demo-api-key": CG_KEY}, timeout=10)
+        data = r.json()
+        btc_24h = data.get("bitcoin", {}).get("usd_24h_change", 0)
+        btc_trend = "up" if btc_24h > 0 else "down" if btc_24h < 0 else "neutral"
+        return {"btc_24h": btc_24h, "btc_trend": btc_trend}
+    except:
+        return {"btc_24h": 0, "btc_trend": "neutral"}
 
-def main():
+if __name__ == "__main__":
     signals = scan_market()
     if signals:
         broadcast_signals(signals)
@@ -465,6 +472,4 @@ def main():
         broadcast_signals(updated, to_admin=True)
         save_signals(updated)
         print(f"Updated {len(updated)} signals")
-
-if __name__ == "__main__":
-    main()
+    print("Done.")
