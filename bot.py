@@ -91,7 +91,7 @@ def get_1h_change(symbol):
     """Return 1h price change % (last close vs previous close)."""
     try:
         r = requests.get(f"{MEXC_BASE}/api/v3/klines",
-                         params={"symbol": symbol, "interval": "1h", "limit": 2}, timeout=10)
+                         params={"symbol": symbol, "interval": "60m", "limit": 2}, timeout=10)
         k = r.json()
         if len(k) >= 2:
             prev_close = float(k[0][4])
@@ -116,7 +116,7 @@ def get_tickers():
     out = [(x["t"], x["ch24"], None) for x in candidates_24h]
     return out
 
-def get_klines(symbol, interval="1h", limit=100):
+def get_klines(symbol, interval="60m", limit=100):
     try:
         r = requests.get(f"{MEXC_BASE}/api/v3/klines", params={"symbol": symbol, "interval": interval, "limit": limit}, timeout=15)
         return r.json()
@@ -384,7 +384,7 @@ def check_outcomes(open_signals):
         side = sig["side"]
         entry = sig["entry"]
         sl = sig["sl"]; tp1 = sig["tp1"]; tp2 = sig["tp2"]; tp3 = sig["tp3"]
-        klines = get_klines(symbol, interval="1h", limit=2)
+        klines = get_klines(symbol, interval="60m", limit=2)
         if len(klines) < 2: continue
         # last closed candle
         h = float(klines[-1][2]); l = float(klines[-1][3]); c = float(klines[-1][4])
