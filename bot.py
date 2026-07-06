@@ -3,12 +3,9 @@ import json
 import time
 import hmac
 import hashlib
-import re
 import requests
 from datetime import datetime, timezone, timedelta
-from concurrent.futures import ThreadPoolExecutor, as_completed
-import random
-import subprocess
+from concurrent.futures import ThreadPoolExecutor
 
 # ===== Config =====
 MEXC_BASE = "https://api.mexc.com"  # spot (kept for server time)
@@ -29,7 +26,7 @@ MEXC_ACCESS = os.environ.get("MEXC_ACCESS_KEY", "")
 CG_KEY = os.environ.get("COINGECKO_API_KEY", "")
 
 TOP_N_BY_VOLUME = 1000
-MAX_WORKERS = 10
+MAX_WORKERS = 12
 
 GEMINI_DAILY_LIMIT = 30
 GEMINI_TOP_N_PER_RUN = 5
@@ -407,9 +404,16 @@ def scan_market():
     cg_calls = 0
     SCORE_FLOOR = 0.05
 
-    for t, ch24, ch1h in candidates:
-        symbol = t  # already in 'XRB_USDT' format from get_tickers
-        klines = get_klines(symbol)
+    # Pre-fetch klines for all candidates in parallel (avoids timeout on slow MEXC responses)
+    def fetch_one(item):
+        sym, ch24, ch1h = item
+        klines = get_klines(sym)
+        return (sym, ch24, ch1h, klines)
+
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as ex:
+        fetched = list(ex.map(fetch_one, candidates))
+
+    for sym, ch24, ch1h, klines in fetched:
         if len(klines) < 50: continue
         closes = [float(k[4]) for k in klines]
         highs = [float(k[2]) for k in klines]
@@ -438,15 +442,14 @@ def scan_market():
         allowed, block_reason = market_allows_side(side, market_ctx)
         if not allowed: continue
         scored.append({
-            "score": score, "side": side, "symbol": symbol,
+            "score": score, "side": side, "symbol": sym,
             "last_close": last_close, "atr_v": atr_v,
             "ch24": ch24, "ch1h": ch1h,
             "indicators": indicators, "reasons": reasons,
         })
 
-    # Fetch funding rate for top candidates (one request per coin)
-    funding_lookahead = GEMINI_TOP_N_PER_RUN * 3
-    for c in scored[:funding_lookahead]:
+    # Fetch funding only for the top N that will go to Gemini (saves API calls)
+    for c in scored[:GEMINI_TOP_N_PER_RUN]:
         ctx = get_futures_context(c["symbol"])
         c["indicators"]["funding_rate"] = ctx["funding_rate"]
     # Re-score with funding context now in hand
