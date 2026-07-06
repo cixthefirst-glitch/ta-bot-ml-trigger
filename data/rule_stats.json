@@ -1,23 +1,23 @@
 {
   "EMA": {
     "wins": 2,
-    "losses": 1,
-    "samples": 3
+    "losses": 3,
+    "samples": 5
   },
   "Bollinger": {
     "wins": 0,
-    "losses": 1,
-    "samples": 1
+    "losses": 3,
+    "samples": 3
   },
   "Volume": {
     "wins": 1,
-    "losses": 1,
-    "samples": 2
+    "losses": 3,
+    "samples": 4
   },
   "Momentum": {
     "wins": 1,
-    "losses": 1,
-    "samples": 2
+    "losses": 3,
+    "samples": 4
   },
   "RSI": {
     "wins": 1,
