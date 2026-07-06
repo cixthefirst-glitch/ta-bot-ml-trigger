@@ -29,6 +29,15 @@ CG_KEY = os.environ.get("COINGECKO_API_KEY", "")
 TOP_N_BY_VOLUME = 1000
 MAX_WORKERS = 10  # parallel 1h change fetches
 
+# Gemini is rate-limited on the free tier (limit: 0 per minute is effectively
+# 15/min and ~1500/day). Don't hammer it on every coin — only consult Gemini
+# on the top N scoring candidates per run, and track daily usage to avoid
+# burning through the quota. 2026-07-06: limit was lifted to per-coin call,
+# exhausting free tier in one run.
+GEMINI_DAILY_LIMIT = 30                # 30 calls/day × 24 runs/day = 0.5/min; safely under 15/min
+GEMINI_TOP_N_PER_RUN = 5               # ask Gemini about at most 5 coins per hourly run
+GEMINI_USAGE_FILE = "data/gemini_usage.json"
+
 # ===== Telegram =====
 def tg_send(text, to_admin=False):
     target = ADMIN_CHAT if to_admin else TG_CHAT
@@ -40,6 +49,37 @@ def tg_send(text, to_admin=False):
     except Exception as e:
         print(f"TG error: {e}")
         return False
+
+# ===== Gemini quota tracking =====
+def gemini_quota_today():
+    """Return number of Gemini calls used today (UTC)."""
+    if not os.path.exists(GEMINI_USAGE_FILE):
+        return 0
+    try:
+        with open(GEMINI_USAGE_FILE) as f:
+            data = json.load(f)
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        if data.get("date") != today:
+            return 0
+        return int(data.get("count", 0))
+    except Exception:
+        return 0
+
+def gemini_quota_bump(n=1):
+    """Record n Gemini calls used today."""
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    current = 0
+    if os.path.exists(GEMINI_USAGE_FILE):
+        try:
+            with open(GEMINI_USAGE_FILE) as f:
+                data = json.load(f)
+            if data.get("date") == today:
+                current = int(data.get("count", 0))
+        except Exception:
+            pass
+    os.makedirs("data", exist_ok=True)
+    with open(GEMINI_USAGE_FILE, "w") as f:
+        json.dump({"date": today, "count": current + n}, f)
 
 # ===== MEXC signed requests =====
 def mexc_signed_request(method, endpoint, params=None):
@@ -107,7 +147,7 @@ def get_tickers():
     top = get_top_usdt_tickers(TOP_N_BY_VOLUME)
     if not top: return []
 
-    FLOOR = 0.03   # minimum movement to consider a coin (24h) — keeps out dead coins
+    FLOOR = 0.03   # minimum movement to consider a coin (24h)
     candidates_24h = [x for x in top if abs(x["ch24"]) >= FLOOR]
     print(f"  Top {len(top)} by volume, {len(candidates_24h)} pass 24h >= {FLOOR}%")
 
@@ -126,7 +166,6 @@ def get_klines(symbol, interval="60m", limit=100):
 CG_CACHE = {}
 CG_RATE_LIMITED_UNTIL = 0
 
-# ===== CoinGecko =====
 def get_coin_context(symbol):
     """Return CoinGecko context for a symbol: 30d change and market cap rank."""
     global CG_CACHE, CG_RATE_LIMITED_UNTIL
@@ -135,10 +174,10 @@ def get_coin_context(symbol):
     if symbol in CG_CACHE:
         return CG_CACHE[symbol]
     try:
-        if CG_KEY:
-            r = requests.get(f"{CG_BASE}/coins/markets", params={"vs_currency": "usd", "ids": symbol.lower(), "order": "market_cap_desc", "per_page": 1, "page": 1, "sparkline": False}, timeout=10)
-        else:
-            r = requests.get(f"{CG_BASE}/coins/markets", params={"vs_currency": "usd", "ids": symbol.lower(), "order": "market_cap_desc", "per_page": 1, "page": 1, "sparkline": False}, timeout=10)
+        r = requests.get(f"{CG_BASE}/coins/markets",
+                         params={"vs_currency": "usd", "ids": symbol.lower(),
+                                 "order": "market_cap_desc", "per_page": 1, "page": 1, "sparkline": False},
+                         timeout=10)
         data = r.json()
         if not data:
             return None
@@ -154,9 +193,7 @@ def get_coin_context(symbol):
 
 # ===== Indicators =====
 def rsi(closes, period=14):
-    """RSI indicator."""
-    if len(closes) < period + 1:
-        return None
+    if len(closes) < period + 1: return None
     deltas = [closes[i] - closes[i - 1] for i in range(1, len(closes))]
     ups = sum(d for d in deltas if d > 0)
     downs = sum(-d for d in deltas if d < 0)
@@ -164,9 +201,7 @@ def rsi(closes, period=14):
     return 100 - (100 / (1 + rs))
 
 def ema(data, period=9):
-    """Exponential Moving Average. Operates on plain Python lists."""
-    if len(data) < period:
-        return None
+    if len(data) < period: return None
     k = 2 / (period + 1)
     ema_val = sum(data[:period]) / period
     for price in data[period:]:
@@ -174,120 +209,81 @@ def ema(data, period=9):
     return ema_val
 
 def bollinger(closes, period=20, std_dev=2):
-    """Bollinger Bands."""
-    if len(closes) < period:
-        return None, None, None
+    if len(closes) < period: return None, None, None
     sma = ema(closes, period)
-    if sma is None:
-        return None, None, None
+    if sma is None: return None, None, None
     std = (sum((x - sma) ** 2 for x in closes[-period:]) / period) ** 0.5
     upper = sma + std_dev * std
     lower = sma - std_dev * std
     return upper, sma, lower
 
 def atr(highs, lows, closes, period=14):
-    """Average True Range."""
-    if len(highs) < period:
-        return None
+    if len(highs) < period: return None
     trs = []
     for i in range(1, len(highs)):
         hl = highs[i] - lows[i]
         hc = abs(highs[i] - closes[i - 1])
         lc = abs(lows[i] - closes[i - 1])
-        tr = max(hl, hc, lc)
-        trs.append(tr)
-    if not trs:
-        return None
+        trs.append(max(hl, hc, lc))
+    if not trs: return None
     return sum(trs[-period:]) / period
 
 def volume_spike(volumes):
-    """Volume spike detection: 2x average of last 20."""
-    if len(volumes) < 20:
-        return 1.0
+    if len(volumes) < 20: return 1.0
     avg = sum(volumes[-20:]) / 20
-    if avg == 0:
-        return 1.0
+    if avg == 0: return 1.0
     return volumes[-1] / avg
 
 def score_setup(indicators):
-    """Score a coin setup (0.0–1.0).
-    Base 0.20 so a coin with 'EMA down' alone (–0.15) is still positive (0.05)
-    and gets a chance to be evaluated. Weights tuned 2026-07-06: previous setup
-    had base 0.0 and floor 0.05, so EMA-down coins were filtered out completely
-    (all 188 candidates in the run scored 0.00)."""
-    score = 0.20   # base: any coin with valid indicators gets a starting chance
+    """Score a coin setup (0.0–1.0). Base 0.20 so 'EMA down' alone leaves 0.05."""
+    score = 0.20
     reasons = ["base"]
 
-    # RSI: oversold (<30) or overbought (>70) is good for reversal
     rsi_v = indicators.get("rsi", 50)
     if rsi_v < 30:
-        score += 0.20
-        reasons.append("RSI oversold")
+        score += 0.20; reasons.append("RSI oversold")
     elif rsi_v > 70:
-        score += 0.20
-        reasons.append("RSI overbought")
+        score += 0.20; reasons.append("RSI overbought")
 
-    # EMA trend: up is good for LONG, down is good for SHORT
     ema_trend = indicators.get("ema_trend", "neutral")
     if ema_trend == "up":
-        score += 0.15
-        reasons.append("EMA up")
+        score += 0.15; reasons.append("EMA up")
     elif ema_trend == "down":
-        score -= 0.15
-        reasons.append("EMA down")
+        score -= 0.15; reasons.append("EMA down")
 
-    # Bollinger position: middle is neutral, above/below extremes is good
     bb_pos = indicators.get("bb_position", "middle")
     if bb_pos == "above_upper":
-        score += 0.10
-        reasons.append("BB above upper")
+        score += 0.10; reasons.append("BB above upper")
     elif bb_pos == "below_lower":
-        score += 0.10
-        reasons.append("BB below lower")
+        score += 0.10; reasons.append("BB below lower")
 
-    # Volume spike: 2x+ average is good
     vol_ratio = indicators.get("volume_ratio", 1.0)
     if vol_ratio >= 2.0:
-        score += 0.15
-        reasons.append("Volume spike")
+        score += 0.15; reasons.append("Volume spike")
     elif vol_ratio >= 1.5:
-        score += 0.10
-        reasons.append("Volume high")
+        score += 0.10; reasons.append("Volume high")
 
-    # Momentum 1h: strong move is good
     mom_1h = indicators.get("momentum_1h", 0)
     if abs(mom_1h) >= 1.0:
-        score += 0.10
-        reasons.append(f"Momentum {mom_1h:+.1f}%")
+        score += 0.10; reasons.append(f"Momentum {mom_1h:+.1f}%")
 
-    # BTC context: if BTC is crashing, be cautious
     btc_24h = indicators.get("btc_24h", 0)
     if btc_24h < -2.0:
-        score -= 0.10
-        reasons.append("BTC down >2%")
+        score -= 0.10; reasons.append("BTC down >2%")
     elif btc_24h > 2.0:
-        score += 0.10
-        reasons.append("BTC up >2%")
+        score += 0.10; reasons.append("BTC up >2%")
 
-    # Cap at 1.0, floor at 0.0
     score = max(0.0, min(1.0, score))
     return score, reasons
 
 def market_allows_side(side, market_ctx):
-    """Check if market allows LONG or SHORT (no BTC crash for LONG, no BTC pump for SHORT)."""
     btc_24h = market_ctx.get("btc_24h", 0)
-    if side == "LONG" and btc_24h < -2.0:
-        return False, "BTC down >2% (LONG not allowed)"
-    if side == "SHORT" and btc_24h > 2.0:
-        return False, "BTC up >2% (SHORT not allowed)"
+    if side == "LONG" and btc_24h < -2.0: return False, "BTC down >2% (LONG not allowed)"
+    if side == "SHORT" and btc_24h > 2.0: return False, "BTC up >2% (SHORT not allowed)"
     return True, "OK"
 
 def gemini_decide(symbol, side, indicators, market_ctx):
-    """Ask Gemini 2.0 Flash for YES/NO on a signal.
-    Returns (bool, str): (decision, raw_reply). On API failure returns (True, error)
-    so the rules-based score is the gate; Gemini is advisory, not blocking.
-    Previously a Gemini error returned False and silently rejected 100% of
-    candidates even when the indicators were strong."""
+    """Ask Gemini 2.0 Flash for YES/NO. Returns (bool, str)."""
     prompt = f"""Given the following crypto setup, should we take a {side} position on {symbol}? Answer YES or NO.
 
 Indicators:
@@ -305,14 +301,14 @@ Answer YES or NO."""
                           timeout=20)
         data = r.json()
         if "candidates" not in data or not data["candidates"]:
-            # Safety filter or quota: don't block on this
             print(f"  Gemini advisory unavailable: {data.get('error', data) if isinstance(data, dict) else 'no candidates'}")
             return True, "advisory_unavailable"
+        gemini_quota_bump(1)
         reply = data["candidates"][0]["content"]["parts"][0]["text"].strip().upper()
         return ("YES" in reply), reply
     except Exception as e:
         print(f"  Gemini error: {e}")
-        return True, f"error:{e}"  # advisory only — don't block rules-based signals
+        return True, f"error:{e}"
 
 # ===== Main scan =====
 def scan_market():
@@ -323,14 +319,16 @@ def scan_market():
 
     market_ctx = get_btc_eth_context()
     print(f"BTC 24h: {market_ctx.get('btc_24h', 0):+.2f}%, trend: {market_ctx.get('btc_trend')}")
+    print(f"Gemini quota used today: {gemini_quota_today()}/{GEMINI_DAILY_LIMIT}")
 
-    signals = []; cg_calls = 0
-    SCORE_FLOOR = 0.05  # 2026-07-06: lowered threshold; base score is now 0.20
+    scored = []  # list of (score, side, symbol, last_close, atr_v, ch24, ch1h, indicators, reasons)
+    cg_calls = 0
+    SCORE_FLOOR = 0.05
 
     for t, ch24, ch1h in candidates:
         symbol = t["symbol"]
         klines = get_klines(symbol)
-        if len(klines) < 50: print(f"  {symbol} -> skipped: <50 klines"); continue
+        if len(klines) < 50: continue
         closes = [float(k[4]) for k in klines]
         highs = [float(k[2]) for k in klines]
         lows = [float(k[3]) for k in klines]
@@ -358,33 +356,67 @@ def scan_market():
                 indicators["cg_mcap_rank"] = cg_data.get("rank")
                 cg_calls += 1
         score, reasons = score_setup(indicators)
-        if score < SCORE_FLOOR: print(f"  {symbol} -> score {score:.2f} (need {SCORE_FLOOR}+): {reasons}"); continue
+        if score < SCORE_FLOOR: continue
         side = "LONG" if (rsi_v < 50 or ema_trend == "up") else "SHORT"
         allowed, block_reason = market_allows_side(side, market_ctx)
-        if not allowed: print(f"  {symbol} {side} -> {block_reason}"); continue
-        gem_ok, gem_reply = gemini_decide(symbol, side, indicators, market_ctx)
-        if not gem_ok: print(f"  {symbol} {side} -> Gemini said NO: {gem_reply[:50]}"); continue
+        if not allowed: continue
+        scored.append({
+            "score": score, "side": side, "symbol": symbol,
+            "last_close": last_close, "atr_v": atr_v,
+            "ch24": ch24, "ch1h": ch1h,
+            "indicators": indicators, "reasons": reasons,
+        })
+
+    # Sort by score desc, take top N
+    scored.sort(key=lambda x: x["score"], reverse=True)
+    top = scored[:GEMINI_TOP_N_PER_RUN]
+    print(f"  {len(scored)} coins pass score floor; consulting Gemini on top {len(top)}")
+
+    # Daily quota check: how many Gemini calls can we still make
+    quota_used = gemini_quota_today()
+    quota_left = max(0, GEMINI_DAILY_LIMIT - quota_used)
+    gemini_slots = min(len(top), quota_left)
+
+    signals = []
+    gemini_calls_made = 0
+    for i, c in enumerate(top):
+        # Once we exhaust Gemini slots, the rest go in based on rules alone
+        if i < gemini_slots:
+            gem_ok, gem_reply = gemini_decide(c["symbol"], c["side"], c["indicators"], market_ctx)
+            gemini_calls_made += 1
+            c["gemini_reply"] = gem_reply
+            if not gem_ok:
+                print(f"  {c['symbol']} {c['side']} (score {c['score']:.2f}) -> Gemini NO: {gem_reply[:50]}")
+                continue
+        else:
+            c["gemini_reply"] = "skipped:quota"
+
+        side = c["side"]
+        last_close = c["last_close"]
+        atr_v = c["atr_v"]
         if side == "LONG":
             sl = last_close - atr_v * 1.5
             tp1 = last_close + atr_v * 1.0; tp2 = last_close + atr_v * 2.0; tp3 = last_close + atr_v * 3.0
         else:
             sl = last_close + atr_v * 1.5
             tp1 = last_close - atr_v * 1.0; tp2 = last_close - atr_v * 2.0; tp3 = last_close - atr_v * 3.0
-        relevant_ch = ch1h if ch1h is not None else ch24
         sig = {
-            "id": f"{symbol}_{int(time.time())}",
+            "id": f"{c['symbol']}_{int(time.time())}",
             "ts": datetime.now(timezone.utc).isoformat(),
-            "symbol": symbol, "side": side, "entry": last_close,
+            "symbol": c["symbol"], "side": side, "entry": last_close,
             "sl": sl, "tp1": tp1, "tp2": tp2, "tp3": tp3,
-            "score": score, "reasons": reasons,
-            "indicators": {k: v for k, v in indicators.items() if k != "cg_30d" or v is not None},
+            "score": c["score"], "reasons": c["reasons"],
+            "indicators": {k: v for k, v in c["indicators"].items() if k != "cg_30d" or v is not None},
             "btc_context": {"btc_24h": market_ctx.get("btc_24h"), "btc_trend": market_ctx.get("btc_trend")},
-            "trigger": "1h" if ch1h is not None else "24h",
-            "ch24": ch24, "ch1h": ch1h,
+            "trigger": "1h" if c["ch1h"] is not None else "24h",
+            "ch24": c["ch24"], "ch1h": c["ch1h"],
+            "gemini": c["gemini_reply"],
             "status": "OPEN",
         }
         signals.append(sig)
-    print(f"Generated {len(signals)} signals (CG calls used: {cg_calls})")
+        print(f"  ✓ {side} {c['symbol']} score={c['score']:.2f} entry={last_close:.6g} (gemini: {c['gemini_reply'][:30]})")
+
+    print(f"Generated {len(signals)} signals (CG calls: {cg_calls}, Gemini calls: {gemini_calls_made}/{GEMINI_TOP_N_PER_RUN})")
     return signals
 
 def check_outcomes(open_signals):
@@ -395,7 +427,6 @@ def check_outcomes(open_signals):
         if old_status in ("CLOSED_WIN_TP1", "CLOSED_WIN_TP2", "CLOSED_WIN_TP3", "CLOSED_LOSS", "EXPIRED"):
             continue
         side = sig["side"]
-        entry = sig["entry"]
         sl = sig["sl"]; tp1 = sig["tp1"]; tp2 = sig["tp2"]; tp3 = sig["tp3"]
         klines = get_klines(symbol, interval="60m", limit=2)
         if len(klines) < 2: continue
@@ -406,7 +437,7 @@ def check_outcomes(open_signals):
             elif h >= tp2: new_status = "CLOSED_WIN_TP2"
             elif h >= tp1: new_status = "CLOSED_WIN_TP1"
             elif l <= sl: new_status = "CLOSED_LOSS"
-        else:  # SHORT
+        else:
             if l <= tp3: new_status = "CLOSED_WIN_TP3"
             elif l <= tp2: new_status = "CLOSED_WIN_TP2"
             elif l <= tp1: new_status = "CLOSED_WIN_TP1"
@@ -430,17 +461,16 @@ def save_signals(sigs):
         json.dump(sigs, f, indent=2, default=str)
 
 def broadcast_signals(signals, to_admin=False):
-    """Broadcast signals to Telegram."""
     if not signals:
         if to_admin: tg_send("0 signals updated this run.", to_admin=True)
         return
     text = "<b>🚀 TA-BOT ML SIGNALS</b>\n\n"
     for sig in signals:
-        if "close_price" in sig:  # outcome update
+        if "close_price" in sig:
             emoji = "✅" if "WIN" in sig["status"] else "❌"
             text += f"{emoji} <b>{sig['side']} {sig['symbol']}</b> → {sig['status']}\n"
             text += f"Entry: {sig['entry']:.6g} → Close: {sig['close_price']:.6g}\n\n"
-        else:  # new signal
+        else:
             emoji = "🟢" if sig["side"] == "LONG" else "🔴"
             text += f"{emoji} <b>{sig['side']} {sig['symbol']}</b> ({sig['trigger']}: {sig.get('ch24', 0) or sig.get('ch1h', 0):+.1f}%)\n"
             text += f"Entry: {sig['entry']:.6g} | SL: {sig['sl']:.6g}\n"
@@ -449,8 +479,7 @@ def broadcast_signals(signals, to_admin=False):
     tg_send(text, to_admin=to_admin)
 
 def get_btc_eth_context():
-    """Get BTC and ETH 24h change from CoinGecko."""
-    if not CG_KEY: return {"btc_24h": 0, "eth_24h": 0, "btc_trend": "neutral"}
+    if not CG_KEY: return {"btc_24h": 0, "btc_trend": "neutral"}
     try:
         r = requests.get(f"{CG_BASE}/simple/price",
                          params={"ids": "bitcoin,ethereum", "vs_currencies": "usd", "include_24hr_change": "true"},
