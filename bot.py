@@ -103,33 +103,17 @@ def get_1h_change(symbol):
     return None
 
 def get_tickers():
-    """Return top-volume USDT pairs passing EITHER 24h >= 0.03% OR 1h >= 0.03%.
+    """Return top-volume USDT pairs passing 24h >= 0.03% volatility.
     (Lowered from 0.1% to 0.03% to catch more signals.)"""
     top = get_top_usdt_tickers(TOP_N_BY_VOLUME)
     if not top: return []
 
-    FLOOR = 0.03   # minimum movement to consider a coin (24h or 1h) — keeps out dead coins
+    FLOOR = 0.03   # minimum movement to consider a coin (24h) — keeps out dead coins
     candidates_24h = [x for x in top if abs(x["ch24"]) >= FLOOR]
     print(f"  Top {len(top)} by volume, {len(candidates_24h)} pass 24h >= {FLOOR}%")
 
-    rest = [x for x in top if abs(x["ch24"]) < FLOOR]
-    candidates_1h = []
-    if rest:
-        with ThreadPoolExecutor(max_workers=MAX_WORKERS) as ex:
-            futs = {ex.submit(get_1h_change, x["t"]["symbol"]): x for x in rest}
-            done = 0
-            for fut in as_completed(futs):
-                done += 1
-                ch1h = fut.result()
-                x = futs[fut]
-                if ch1h is not None and abs(ch1h) >= FLOOR:
-                    candidates_1h.append((x["t"], x["ch24"], ch1h))
-                if done % 50 == 0:
-                    print(f"  1h check: {done}/{len(rest)} done")
-    print(f"  {len(candidates_1h)} pass 1h >= {FLOOR}% (parallel)")
-
     # Combine
-    out = [(x["t"], x["ch24"], None) for x in candidates_24h] + candidates_1h
+    out = [(x["t"], x["ch24"], None) for x in candidates_24h]
     return out
 
 def get_klines(symbol, interval="1h", limit=100):
@@ -322,9 +306,7 @@ def scan_market():
     print(f"[{datetime.now(timezone.utc).isoformat()}] Scanning MEXC (top {TOP_N_BY_VOLUME} by volume)...")
     candidates = get_tickers()
     FLOOR = 0.03
-    n_24h = sum(1 for _, ch24, _ in candidates if ch24 is not None and abs(ch24) >= FLOOR)
-    n_1h = len(candidates) - n_24h
-    print(f"Found {len(candidates)} volatile coins (24h>={FLOOR}%: {n_24h}, 1h>={FLOOR}%: {n_1h})")
+    print(f"Found {len(candidates)} volatile coins (24h>={FLOOR}%)")
 
     market_ctx = get_btc_eth_context()
     print(f"BTC 24h: {market_ctx.get('btc_24h', 0):+.2f}%, trend: {market_ctx.get('btc_trend')}")
