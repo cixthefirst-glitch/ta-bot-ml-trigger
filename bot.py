@@ -166,11 +166,12 @@ def rsi(closes, period=14):
     return 100 - (100 / (1 + rs))
 
 def ema(data, period=9):
-    """Exponential Moving Average."""
+    """Exponential Moving Average. Operates on plain Python lists."""
     if len(data) < period:
         return None
     k = 2 / (period + 1)
-    ema_val = data[:period].mean()
+    # Seed with simple mean of the first `period` values (was pandas Series.mean() which crashed on list)
+    ema_val = sum(data[:period]) / period
     for price in data[period:]:
         ema_val = price * k + ema_val * (1 - k)
     return ema_val
