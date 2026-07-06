@@ -18,6 +18,7 @@ SPOT_ARCHIVE_FILE = "data/signals_spot_archive.json"  # archived spot signals
 MODEL_FILE = "data/model.pkl"
 COEFS_FILE = "data/model_coefs.json"
 ML_INFLUENCE = 0.25
+MAX_HOLD_HOURS = 24  # auto-expire signals older than this with no TP/SL hit (was: never expired)
 
 GEMINI_KEY = os.environ["GEMINI_API_KEY"]
 TG_TOKEN = "8766961406:AAEikTWIpdxMjjUEfd6qW-79o2zgz_95gvw"
@@ -550,30 +551,70 @@ def scan_market():
     return signals
 
 def check_outcomes(open_signals):
+    """Update outcome status for open signals.
+    Fix vs prior version: only look at candles that OPENED AT OR AFTER the signal
+    timestamp. The old code used klines[-1] (in-progress candle that started BEFORE
+    the signal) so every signal got closed in 1-2 seconds based on pre-signal action.
+    Also: auto-expire signals older than MAX_HOLD_HOURS with no TP/SL hit.
+    """
     updated = []
+    now = datetime.now(timezone.utc)
     for sig in open_signals:
         symbol = sig["symbol"]; old_status = sig.get("status")
         if old_status in ("CLOSED_WIN_TP1", "CLOSED_WIN_TP2", "CLOSED_WIN_TP3", "CLOSED_LOSS", "EXPIRED"):
             continue
         side = sig["side"]; sl = sig["sl"]; tp1 = sig["tp1"]; tp2 = sig["tp2"]; tp3 = sig["tp3"]
-        klines = get_klines(symbol, interval="60m", limit=2)
-        if len(klines) < 2: continue
-        h = float(klines[-1][2]); l = float(klines[-1][3]); c = float(klines[-1][4])
-        new_status = None
-        if side == "LONG":
-            if h >= tp3: new_status = "CLOSED_WIN_TP3"
-            elif h >= tp2: new_status = "CLOSED_WIN_TP2"
-            elif h >= tp1: new_status = "CLOSED_WIN_TP1"
-            elif l <= sl: new_status = "CLOSED_LOSS"
-        else:
-            if l <= tp3: new_status = "CLOSED_WIN_TP3"
-            elif l <= tp2: new_status = "CLOSED_WIN_TP2"
-            elif l <= tp1: new_status = "CLOSED_WIN_TP1"
-            elif h >= sl: new_status = "CLOSED_LOSS"
+
+        # Parse signal timestamp (ISO string) -> epoch seconds
+        try:
+            sig_ts = datetime.fromisoformat(sig["ts"]).timestamp()
+        except Exception:
+            sig_ts = 0  # legacy signals without ts: treat as always-eligible
+        sig_ts_ms = int(sig_ts * 1000)
+
+        # 1) Expiry check: signal older than MAX_HOLD_HOURS with no hit -> EXPIRED
+        if sig_ts > 0:
+            age_hours = (now.timestamp() - sig_ts) / 3600
+            if age_hours > MAX_HOLD_HOURS:
+                sig["status"] = "EXPIRED"
+                sig["close_ts"] = now.isoformat()
+                sig["close_price"] = None
+                sig["age_hours"] = round(age_hours, 1)
+                updated.append(sig)
+                continue
+
+        # 2) Pull enough 1h candles to cover the time since signal
+        klines = get_klines(symbol, interval="60m", limit=MAX_HOLD_HOURS + 1)
+        if not klines: continue
+
+        # 3) Filter: only candles that opened AT or AFTER the signal timestamp.
+        # The candle that starts at sig_ts_ms is the first legitimate candle.
+        eligible = [k for k in klines if k[0] >= sig_ts_ms]
+        if not eligible:
+            # Signal just posted this minute; wait for the next candle to start
+            continue
+
+        # 4) Walk eligible candles in chronological order. Priority: SL first
+        # (conservative on loss-side), then TPs from highest to lowest.
+        new_status = None; close_px = None
+        for k in eligible:
+            h = float(k[2]); l = float(k[3]); cc = float(k[4])
+            if side == "LONG":
+                if l <= sl: new_status = "CLOSED_LOSS"; close_px = sl; break
+                if h >= tp3: new_status = "CLOSED_WIN_TP3"; close_px = tp3; break
+                if h >= tp2: new_status = "CLOSED_WIN_TP2"; close_px = tp2; break
+                if h >= tp1: new_status = "CLOSED_WIN_TP1"; close_px = tp1; break
+            else:  # SHORT
+                if h >= sl: new_status = "CLOSED_LOSS"; close_px = sl; break
+                if l <= tp3: new_status = "CLOSED_WIN_TP3"; close_px = tp3; break
+                if l <= tp2: new_status = "CLOSED_WIN_TP2"; close_px = tp2; break
+                if l <= tp1: new_status = "CLOSED_WIN_TP1"; close_px = tp1; break
+
         if new_status:
             sig["status"] = new_status
-            sig["close_ts"] = datetime.now(timezone.utc).isoformat()
-            sig["close_price"] = c
+            sig["close_ts"] = now.isoformat()
+            sig["close_price"] = close_px
+            sig["candles_checked"] = len(eligible)
             updated.append(sig)
     return updated
 
