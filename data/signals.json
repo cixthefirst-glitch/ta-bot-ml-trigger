@@ -1,185 +1,187 @@
 [
   {
-    "id": "US_USDT_1783366113",
-    "ts": "2026-07-06T19:28:33.590135+00:00",
-    "symbol": "US_USDT",
+    "id": "SHIB_USDT_1783372715",
+    "ts": "2026-07-06T21:18:35.409316+00:00",
+    "symbol": "SHIB_USDT",
     "side": "LONG",
-    "entry": 0.022128,
-    "sl": 0.021145392857142856,
-    "tp1": 0.022783071428571427,
-    "tp2": 0.023438142857142855,
-    "tp3": 0.024093214285714284,
-    "score": 0.5578,
+    "entry": 4.443e-06,
+    "sl": 4.377535714285714e-06,
+    "tp1": 4.486642857142857e-06,
+    "tp2": 4.530285714285714e-06,
+    "tp3": 4.573928571428571e-06,
+    "score": 0.5856,
+    "reasons": [
+      "base",
+      "EMA up",
+      "Volume high",
+      "Momentum +1.1%",
+      "BTC up >2%"
+    ],
+    "indicators": {
+      "rsi": 53.919372900335944,
+      "ema_trend": "up",
+      "bb_position": "middle",
+      "volume_ratio": 1.7039993104298,
+      "momentum_1h": 1.1381743683132146,
+      "btc_24h": 2.3923553919140828,
+      "funding_rate": -3.3e-05,
+      "cg_mcap_rank": null
+    },
+    "btc_context": {
+      "btc_24h": 2.3923553919140828,
+      "btc_trend": "up"
+    },
+    "trigger": "24h",
+    "ch24": 1.2,
+    "ch1h": null,
+    "gemini": "advisory_unavailable",
+    "status": "OPEN"
+  },
+  {
+    "id": "JTO_USDT_1783372715",
+    "ts": "2026-07-06T21:18:35.590873+00:00",
+    "symbol": "JTO_USDT",
+    "side": "LONG",
+    "entry": 0.7768,
+    "sl": 0.7545571428571429,
+    "tp1": 0.7916285714285715,
+    "tp2": 0.8064571428571429,
+    "tp3": 0.8212857142857143,
+    "score": 0.5442,
     "reasons": [
       "base",
       "EMA up",
       "BB above upper",
-      "Volume spike",
-      "Momentum +14.3%"
+      "Momentum +1.3%",
+      "BTC up >2%"
     ],
     "indicators": {
-      "rsi": 61.01386414685152,
+      "rsi": 51.86700767263427,
       "ema_trend": "up",
       "bb_position": "above_upper",
-      "volume_ratio": 11.523972945395863,
-      "momentum_1h": 14.27391034910142,
-      "btc_24h": 1.7642695794496626,
+      "volume_ratio": 1.1718899733669281,
+      "momentum_1h": 1.25130344108447,
+      "btc_24h": 2.3923553919140828,
       "funding_rate": 0,
       "cg_mcap_rank": null
     },
     "btc_context": {
-      "btc_24h": 1.7642695794496626,
+      "btc_24h": 2.3923553919140828,
       "btc_trend": "up"
     },
     "trigger": "24h",
-    "ch24": 30.36,
+    "ch24": 5.38,
     "ch1h": null,
     "gemini": "advisory_unavailable",
     "status": "OPEN"
   },
   {
-    "id": "ZAMA_USDT_1783366113",
-    "ts": "2026-07-06T19:28:33.736455+00:00",
-    "symbol": "ZAMA_USDT",
-    "side": "LONG",
-    "entry": 0.03428,
-    "sl": 0.033589999999999995,
-    "tp1": 0.03474,
-    "tp2": 0.035199999999999995,
-    "tp3": 0.03566,
-    "score": 0.5578,
-    "reasons": [
-      "base",
-      "EMA up",
-      "BB above upper",
-      "Volume spike",
-      "Momentum +1.5%"
-    ],
-    "indicators": {
-      "rsi": 58.472296933835395,
-      "ema_trend": "up",
-      "bb_position": "above_upper",
-      "volume_ratio": 2.0758817205423403,
-      "momentum_1h": 1.4801657785672009,
-      "btc_24h": 1.7642695794496626,
-      "funding_rate": 0,
-      "cg_mcap_rank": null
-    },
-    "btc_context": {
-      "btc_24h": 1.7642695794496626,
-      "btc_trend": "up"
-    },
-    "trigger": "24h",
-    "ch24": 2.78,
-    "ch1h": null,
-    "gemini": "advisory_unavailable",
-    "status": "OPEN"
-  },
-  {
-    "id": "QNTSTOCK_USDT_1783366113",
-    "ts": "2026-07-06T19:28:33.868107+00:00",
-    "symbol": "QNTSTOCK_USDT",
-    "side": "LONG",
-    "entry": 85.0,
-    "sl": 82.14678571428571,
-    "tp1": 86.90214285714286,
-    "tp2": 88.80428571428571,
-    "tp3": 90.70642857142857,
-    "score": 0.5356,
-    "reasons": [
-      "base",
-      "EMA up",
-      "Volume spike",
-      "Momentum +5.2%"
-    ],
-    "indicators": {
-      "rsi": 60.38220193953223,
-      "ema_trend": "up",
-      "bb_position": "middle",
-      "volume_ratio": 3.6517295597484276,
-      "momentum_1h": 5.198019801980202,
-      "btc_24h": 1.7642695794496626,
-      "funding_rate": 0,
-      "cg_mcap_rank": null
-    },
-    "btc_context": {
-      "btc_24h": 1.7642695794496626,
-      "btc_trend": "up"
-    },
-    "trigger": "24h",
-    "ch24": 3.09,
-    "ch1h": null,
-    "gemini": "advisory_unavailable",
-    "status": "OPEN"
-  },
-  {
-    "id": "VET_USDT_1783366114",
-    "ts": "2026-07-06T19:28:34.002292+00:00",
-    "symbol": "VET_USDT",
-    "side": "LONG",
-    "entry": 0.004975,
-    "sl": 0.004877821428571428,
-    "tp1": 0.0050397857142857145,
-    "tp2": 0.005104571428571429,
-    "tp3": 0.005169357142857143,
-    "score": 0.4356,
-    "reasons": [
-      "base",
-      "EMA up",
-      "Volume spike"
-    ],
-    "indicators": {
-      "rsi": 60.198226395409506,
-      "ema_trend": "up",
-      "bb_position": "middle",
-      "volume_ratio": 5.739256309969919,
-      "momentum_1h": 0.505050505050502,
-      "btc_24h": 1.7642695794496626,
-      "funding_rate": 0,
-      "cg_mcap_rank": null
-    },
-    "btc_context": {
-      "btc_24h": 1.7642695794496626,
-      "btc_trend": "up"
-    },
-    "trigger": "24h",
-    "ch24": 3.06,
-    "ch1h": null,
-    "gemini": "advisory_unavailable",
-    "status": "OPEN"
-  },
-  {
-    "id": "TLM_USDT_1783366114",
-    "ts": "2026-07-06T19:28:34.131366+00:00",
+    "id": "TLM_USDT_1783372715",
+    "ts": "2026-07-06T21:18:35.771087+00:00",
     "symbol": "TLM_USDT",
     "side": "LONG",
-    "entry": 0.003409,
-    "sl": 0.002947,
-    "tp1": 0.0037170000000000003,
-    "tp2": 0.004025,
-    "tp3": 0.004333,
-    "score": 0.42200000000000004,
+    "entry": 0.00326,
+    "sl": 0.002804642857142857,
+    "tp1": 0.0035635714285714285,
+    "tp2": 0.003867142857142857,
+    "tp3": 0.004170714285714285,
+    "score": 0.522,
     "reasons": [
       "base",
       "EMA up",
-      "Momentum -1.1%"
+      "Momentum +2.1%",
+      "BTC up >2%"
     ],
     "indicators": {
-      "rsi": 56.67754975124379,
+      "rsi": 55.48635140330642,
       "ema_trend": "up",
       "bb_position": "middle",
-      "volume_ratio": 0.11034716130149119,
-      "momentum_1h": -1.1024078909196358,
-      "btc_24h": 1.7642695794496626,
+      "volume_ratio": 0.14830416105203745,
+      "momentum_1h": 2.098340119010328,
+      "btc_24h": 2.3923553919140828,
       "funding_rate": 5e-05,
       "cg_mcap_rank": null
     },
     "btc_context": {
-      "btc_24h": 1.7642695794496626,
+      "btc_24h": 2.3923553919140828,
       "btc_trend": "up"
     },
     "trigger": "24h",
-    "ch24": -9.69,
+    "ch24": -13.61,
+    "ch1h": null,
+    "gemini": "advisory_unavailable",
+    "status": "OPEN"
+  },
+  {
+    "id": "XRP_USDT_1783372715",
+    "ts": "2026-07-06T21:18:35.916702+00:00",
+    "symbol": "XRP_USDT",
+    "side": "LONG",
+    "entry": 1.1568,
+    "sl": 1.1374714285714285,
+    "tp1": 1.1696857142857144,
+    "tp2": 1.1825714285714286,
+    "tp3": 1.195457142857143,
+    "score": 0.522,
+    "reasons": [
+      "base",
+      "EMA up",
+      "Momentum +1.2%",
+      "BTC up >2%"
+    ],
+    "indicators": {
+      "rsi": 57.51272405399426,
+      "ema_trend": "up",
+      "bb_position": "middle",
+      "volume_ratio": 0.8784152695542068,
+      "momentum_1h": 1.1719433269197201,
+      "btc_24h": 2.3923553919140828,
+      "funding_rate": 3.2e-05,
+      "cg_mcap_rank": null
+    },
+    "btc_context": {
+      "btc_24h": 2.3923553919140828,
+      "btc_trend": "up"
+    },
+    "trigger": "24h",
+    "ch24": 1.0699999999999998,
+    "ch1h": null,
+    "gemini": "advisory_unavailable",
+    "status": "OPEN"
+  },
+  {
+    "id": "VET_USDT_1783372716",
+    "ts": "2026-07-06T21:18:36.066609+00:00",
+    "symbol": "VET_USDT",
+    "side": "LONG",
+    "entry": 0.004998,
+    "sl": 0.004891392857142857,
+    "tp1": 0.005069071428571429,
+    "tp2": 0.005140142857142857,
+    "tp3": 0.005211214285714286,
+    "score": 0.522,
+    "reasons": [
+      "base",
+      "EMA up",
+      "Momentum +1.1%",
+      "BTC up >2%"
+    ],
+    "indicators": {
+      "rsi": 59.665144596651466,
+      "ema_trend": "up",
+      "bb_position": "middle",
+      "volume_ratio": 0.9621499002878166,
+      "momentum_1h": 1.0922330097087425,
+      "btc_24h": 2.3923553919140828,
+      "funding_rate": 0,
+      "cg_mcap_rank": null
+    },
+    "btc_context": {
+      "btc_24h": 2.3923553919140828,
+      "btc_trend": "up"
+    },
+    "trigger": "24h",
+    "ch24": 3.54,
     "ch1h": null,
     "gemini": "advisory_unavailable",
     "status": "OPEN"
