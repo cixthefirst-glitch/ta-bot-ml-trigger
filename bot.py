@@ -679,16 +679,29 @@ def archive_spot_signals_if_needed():
 
 if __name__ == "__main__":
     archive_spot_signals_if_needed()
-    signals = scan_market()
-    if signals:
-        broadcast_signals(signals)
-        save_signals(signals)
+    new_signals = scan_market()
+    existing = load_signals()
+    if new_signals:
+        broadcast_signals(new_signals)
+        # Merge: keep all existing signals, append new ones (dedupe by id).
+        # Without this, save_signals() below would WIPE the previously-OPEN signals
+        # that are still waiting to hit TP/SL, losing real outcome data.
+        existing_ids = {s["id"] for s in existing}
+        for s in new_signals:
+            if s["id"] not in existing_ids:
+                existing.append(s)
+        save_signals(existing)
+        print(f"Appended {len(new_signals)} new signal(s) (total active: {len(existing)})")
     open_signals = load_signals()
     updated = check_outcomes(open_signals)
     if updated:
+        # Write back the FULL list with updated statuses, not just the updated ones
+        by_id = {s["id"]: s for s in open_signals}
+        for u in updated: by_id[u["id"]] = u
+        full = list(by_id.values())
+        save_signals(full)
         broadcast_signals(updated, to_admin=True)
-        save_signals(updated)
-        print(f"Updated {len(updated)} signals")
+        print(f"Updated {len(updated)} signal(s) (total active: {len(full)})")
     all_signals = load_signals()
     new_outcomes, stats = learn_from_outcomes(all_signals)
     if new_outcomes:
