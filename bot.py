@@ -311,21 +311,10 @@ def scan_market():
     market_ctx = get_btc_eth_context()
     print(f"BTC 24h: {market_ctx.get('btc_24h', 0):+.2f}%, trend: {market_ctx.get('btc_trend')}")
 
-    signals = []; cg_calls = 0; skipped_lowhist = 0
-    # Pre-filter: drop candidates that don't have 50+ 1h klines.
-    # These are freshly-launched tokens that survived the vol filter on a single
-    # 24h move but have no price history to analyze.
-    pre_filtered = []
-    for cand in candidates:  # scan ALL candidates, not just top 50 (was the bug causing 0 signals)
-        sym = cand[0]["symbol"]
-        kc = get_klines(sym, limit=50)
-        if len(kc) < 50:
-            skipped_lowhist += 1
-            continue
-        pre_filtered.append(cand)
-    if skipped_lowhist:
-        print(f"  {skipped_lowhist} skipped (insufficient history <50 1h klines)")
-    candidates = pre_filtered
+    signals = []; cg_calls = 0
+    # The main loop handles the <50 klines check inline; no separate pre-filter
+    # (the old pre-filter hammered MEXC with 300+ sequential kline calls, hit
+    # rate limit, returned empty arrays for everyone, and dropped all 302 candidates)
     for t, ch24, ch1h in candidates:
         symbol = t["symbol"]
         klines = get_klines(symbol)
