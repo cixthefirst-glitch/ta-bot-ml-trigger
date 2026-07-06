@@ -11,11 +11,13 @@ import random
 import subprocess
 
 # ===== Config =====
-MEXC_BASE = "https://api.mexc.com"
+MEXC_BASE = "https://api.mexc.com"  # spot (kept for server time)
+FUTURES_BASE = "https://contract.mexc.com"
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
 TELEGRAM_API = "https://api.telegram.org/bot{token}/{method}"
 CG_BASE = "https://api.coingecko.com/api/v3"
-STATE_FILE = "data/signals.json"
+STATE_FILE = "data/signals.json"  # active futures signals
+SPOT_ARCHIVE_FILE = "data/signals_spot_archive.json"  # archived spot signals
 MODEL_FILE = "data/model.pkl"
 
 GEMINI_KEY = os.environ["GEMINI_API_KEY"]
@@ -29,17 +31,10 @@ CG_KEY = os.environ.get("COINGECKO_API_KEY", "")
 TOP_N_BY_VOLUME = 1000
 MAX_WORKERS = 10
 
-# Gemini free-tier quota: limit: 0 per minute is effectively ~15/min and ~1500/day.
 GEMINI_DAILY_LIMIT = 30
 GEMINI_TOP_N_PER_RUN = 5
 GEMINI_USAGE_FILE = "data/gemini_usage.json"
 
-# Rule-stats learning: per-rule win/loss tracking. After every CLOSED signal,
-# the bot counts which 'reasons' (e.g. 'RSI overbought', 'EMA up') led to a WIN
-# or LOSS. Each rule's score weight is then nudged by its empirical win-rate
-# (bounded ±0.10). Lightweight, transparent learning loop — no sklearn, no
-# separate training step. Stats are persisted to data/rule_stats.json and
-# auto-committed by the bot.
 RULE_STATS_FILE = "data/rule_stats.json"
 RULE_ADJUSTMENT_MAX = 0.10
 RULE_MIN_SAMPLES = 3
@@ -53,15 +48,13 @@ def tg_send(text, to_admin=False):
         r = requests.post(url, json={"chat_id": target, "text": text, "parse_mode": "HTML", "disable_web_page_preview": True}, timeout=15)
         return r.json().get("ok", False)
     except Exception as e:
-        print(f"TG error: {e}")
-        return False
+        print(f"TG error: {e}"); return False
 
 # ===== Gemini quota tracking =====
 def gemini_quota_today():
     if not os.path.exists(GEMINI_USAGE_FILE): return 0
     try:
-        with open(GEMINI_USAGE_FILE) as f:
-            data = json.load(f)
+        with open(GEMINI_USAGE_FILE) as f: data = json.load(f)
         today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
         if data.get("date") != today: return 0
         return int(data.get("count", 0))
@@ -72,8 +65,7 @@ def gemini_quota_bump(n=1):
     current = 0
     if os.path.exists(GEMINI_USAGE_FILE):
         try:
-            with open(GEMINI_USAGE_FILE) as f:
-                data = json.load(f)
+            with open(GEMINI_USAGE_FILE) as f: data = json.load(f)
             if data.get("date") == today: current = int(data.get("count", 0))
         except Exception: pass
     os.makedirs("data", exist_ok=True)
@@ -82,7 +74,6 @@ def gemini_quota_bump(n=1):
 
 # ===== Rule-stats learning =====
 def _normalize_reason(reason):
-    """Bucket dynamic reasons: 'Momentum +3.2%' -> 'Momentum'."""
     r = reason.strip()
     if r.startswith("Momentum"): return "Momentum"
     if r.startswith("Volume"): return "Volume"
@@ -90,6 +81,7 @@ def _normalize_reason(reason):
     if r.startswith("EMA"): return "EMA"
     if r.startswith("RSI"): return "RSI"
     if r.startswith("BTC"): return "BTC"
+    if r.startswith("funding"): return "Funding"
     return r
 
 def load_rule_stats():
@@ -103,7 +95,6 @@ def save_rule_stats(stats):
     with open(RULE_STATS_FILE, "w") as f: json.dump(stats, f, indent=2)
 
 def learn_from_outcomes(signals):
-    """Walk all closed signals, count wins/losses per rule, persist stats."""
     stats = load_rule_stats()
     new_outcomes = 0
     for sig in signals:
@@ -119,13 +110,10 @@ def learn_from_outcomes(signals):
             stats[key] = entry
         sig["OUTCOME_LOGGED"] = True
         new_outcomes += 1
-    if new_outcomes > 0:
-        save_rule_stats(stats)
+    if new_outcomes > 0: save_rule_stats(stats)
     return new_outcomes, stats
 
 def rule_weight_adjustments():
-    """Return {normalized_rule: delta_weight} based on empirical win-rate.
-    Bounded ±RULE_ADJUSTMENT_MAX. Returns empty for rules with <MIN_SAMPLES."""
     stats = load_rule_stats()
     adj = {}
     for rule, s in stats.items():
@@ -135,7 +123,7 @@ def rule_weight_adjustments():
         adj[rule] = round(delta, 4)
     return adj
 
-# ===== MEXC signed requests =====
+# ===== MEXC signed requests (kept for future use) =====
 def mexc_signed_request(method, endpoint, params=None):
     if not MEXC_SECRET or not MEXC_ACCESS: return None
     params = params or {}
@@ -150,8 +138,7 @@ def mexc_signed_request(method, endpoint, params=None):
         else: r = requests.post(url, headers=headers, timeout=15)
         return r.json() if r.status_code == 200 else None
     except Exception as e:
-        print(f"MEXC signed error: {e}")
-        return None
+        print(f"MEXC signed error: {e}"); return None
 
 def get_mexc_server_time():
     try:
@@ -159,50 +146,92 @@ def get_mexc_server_time():
         return r.json().get("serverTime", int(time.time() * 1000))
     except Exception: return int(time.time() * 1000)
 
-# ===== MEXC public data =====
-def get_top_usdt_tickers(limit=TOP_N_BY_VOLUME):
+# ===== Futures market data =====
+_PERP_CACHE = {"ts": 0, "symbols": []}
+PERP_CACHE_TTL = 3600
+
+def get_perp_symbols():
+    now = time.time()
+    if _PERP_CACHE["symbols"] and (now - _PERP_CACHE["ts"]) < PERP_CACHE_TTL:
+        return _PERP_CACHE["symbols"]
     try:
-        r = requests.get(f"{MEXC_BASE}/api/v3/ticker/24hr", timeout=20)
-        all_t = r.json()
+        r = requests.get(f"{FUTURES_BASE}/api/v1/contract/detail", timeout=15)
+        data = r.json().get("data", [])
+        perps = []
+        for c in data:
+            sym = c.get("symbol", "")
+            if not sym.endswith("_USDT"): continue
+            if c.get("settleCoin") != "USDT": continue
+            dd = c.get("deliveryDate", 0) or 0
+            if dd > 0: continue
+            perps.append(sym)
+        _PERP_CACHE["symbols"] = perps
+        _PERP_CACHE["ts"] = now
+        return perps
     except Exception as e:
-        print(f"MEXC ticker error: {e}"); return []
-    usdt = []
+        print(f"Perp list error: {e}"); return _PERP_CACHE.get("symbols", [])
+
+def get_top_futures_tickers(limit=TOP_N_BY_VOLUME):
+    perps = get_perp_symbols()
+    if not perps: return []
+    try:
+        r = requests.get(f"{FUTURES_BASE}/api/v1/contract/ticker", timeout=20)
+        all_t = r.json().get("data", [])
+    except Exception as e:
+        print(f"Futures ticker error: {e}"); return []
+    out = []
     for t in all_t:
-        if not t.get("symbol", "").endswith("USDT"): continue
+        sym = t.get("symbol", "")
+        if sym not in perps: continue
         try:
-            vol = float(t.get("quoteVolume", 0) or 0)
-            ch24 = float(t.get("priceChangePercent", 0) or 0)
+            vol = float(t.get("volume24", 0) or 0)
+            ch24 = float(t.get("riseFallRate", 0) or 0) * 100
+            last = float(t.get("lastPrice", 0) or 0)
         except: continue
         if vol <= 0: continue
-        usdt.append({"t": t, "vol": vol, "ch24": ch24})
-    usdt.sort(key=lambda x: x["vol"], reverse=True)
-    return usdt[:limit]
+        out.append({"symbol": sym, "vol": vol, "ch24": ch24, "last": last, "t": t})
+    out.sort(key=lambda x: x["vol"], reverse=True)
+    return out[:limit]
 
-def get_1h_change(symbol):
+# Mapping spot-style interval names to futures-style
+_FUTURES_INTERVAL = {
+    "1m": "Min1", "5m": "Min5", "15m": "Min15", "30m": "Min30",
+    "60m": "Min60", "1h": "Hour1", "4h": "Hour4", "1d": "Day1",
+}
+
+def get_klines(symbol, interval="60m", limit=100):
+    """Fetch klines from MEXC FUTURES. Returns list-of-lists in spot-compatible format:
+    [openTime_ms, open, high, low, close, volume]."""
+    fut_interval = _FUTURES_INTERVAL.get(interval, "Min60")
     try:
-        r = requests.get(f"{MEXC_BASE}/api/v3/klines",
-                         params={"symbol": symbol, "interval": "60m", "limit": 2}, timeout=10)
-        k = r.json()
-        if len(k) >= 2:
-            prev_close = float(k[0][4]); last_close = float(k[1][4])
-            if prev_close > 0: return (last_close - prev_close) / prev_close * 100
-    except Exception: pass
-    return None
+        r = requests.get(f"{FUTURES_BASE}/api/v1/contract/kline/{symbol}",
+                         params={"interval": fut_interval, "limit": limit}, timeout=15)
+        d = r.json()
+        if not d.get("success"): return []
+        k = d.get("data", {})
+        if not k or not k.get("time"): return []
+        result = []
+        n = len(k["time"])
+        for i in range(n):
+            result.append([
+                k["time"][i] * 1000,
+                float(k["open"][i]),
+                float(k["high"][i]),
+                float(k["low"][i]),
+                float(k["close"][i]),
+                float(k["vol"][i]),
+            ])
+        return result
+    except Exception as e:
+        print(f"Futures klines error {symbol}: {e}"); return []
 
 def get_tickers():
-    top = get_top_usdt_tickers(TOP_N_BY_VOLUME)
+    top = get_top_futures_tickers(TOP_N_BY_VOLUME)
     if not top: return []
     FLOOR = 0.03
     candidates_24h = [x for x in top if abs(x["ch24"]) >= FLOOR]
-    print(f"  Top {len(top)} by volume, {len(candidates_24h)} pass 24h >= {FLOOR}%")
-    return [(x["t"], x["ch24"], None) for x in candidates_24h]
-
-def get_klines(symbol, interval="60m", limit=100):
-    try:
-        r = requests.get(f"{MEXC_BASE}/api/v3/klines", params={"symbol": symbol, "interval": interval, "limit": limit}, timeout=15)
-        return r.json()
-    except Exception as e:
-        print(f"Klines error {symbol}: {e}"); return []
+    print(f"  Top {len(top)} USDT-M perps by 24h vol, {len(candidates_24h)} pass 24h >= {FLOOR}%")
+    return [(x["symbol"], x["ch24"], None) for x in candidates_24h]
 
 # ===== CoinGecko =====
 CG_CACHE = {}
@@ -224,6 +253,23 @@ def get_coin_context(symbol):
         return CG_CACHE[symbol]
     except Exception as e:
         print(f"CoinGecko error {symbol}: {e}"); return None
+
+# ===== Futures context (funding rate) =====
+def get_futures_context(symbol):
+    """Return {funding_rate, fair_price, idx_price}. Funding rate is 8h decimal
+    (e.g. 0.0001 = 0.01%). Used as a contrarian indicator."""
+    try:
+        r = requests.get(f"{FUTURES_BASE}/api/v1/contract/funding_rate/{symbol}", timeout=8)
+        d = r.json()
+        if d.get("success") and d.get("data"):
+            data = d["data"]
+            return {
+                "funding_rate": float(data.get("fundingRate", 0) or 0),
+                "fair_price": float(data.get("fairPrice", 0) or 0),
+                "idx_price": float(data.get("idxPrice", 0) or 0),
+            }
+    except Exception: pass
+    return {"funding_rate": 0, "fair_price": 0, "idx_price": 0}
 
 # ===== Indicators =====
 def rsi(closes, period=14):
@@ -298,6 +344,11 @@ def score_setup(indicators):
     if btc_24h < -2.0: score -= btc_w; reasons.append("BTC down >2%")
     elif btc_24h > 2.0: score += btc_w; reasons.append("BTC up >2%")
 
+    # Funding rate (futures only): extreme funding = market over-leveraged
+    fund = indicators.get("funding_rate", 0) or 0
+    if fund > 0.0005: score -= 0.05; reasons.append("funding very high")
+    elif fund < -0.0005: score += 0.05; reasons.append("funding very low")
+
     return max(0.0, min(1.0, score)), reasons
 
 def market_allows_side(side, market_ctx):
@@ -316,6 +367,7 @@ Indicators:
 - Volume ratio: {indicators.get('volume_ratio', 1.0)}
 - 1h momentum: {indicators.get('momentum_1h', 0)}%
 - BTC 24h: {market_ctx.get('btc_24h', 0)}%
+- Funding rate (8h): {indicators.get('funding_rate', 0)*100:.4f}%
 
 Answer YES or NO."""
     try:
@@ -335,16 +387,15 @@ Answer YES or NO."""
 
 # ===== Main scan =====
 def scan_market():
-    print(f"[{datetime.now(timezone.utc).isoformat()}] Scanning MEXC (top {TOP_N_BY_VOLUME} by volume)...")
+    print(f"[{datetime.now(timezone.utc).isoformat()}] Scanning MEXC USDT-M PERPETUALS (top {TOP_N_BY_VOLUME} by volume)...")
     candidates = get_tickers()
     FLOOR = 0.03
-    print(f"Found {len(candidates)} volatile coins (24h>={FLOOR}%)")
+    print(f"Found {len(candidates)} volatile perps (24h>={FLOOR}%)")
 
     market_ctx = get_btc_eth_context()
     print(f"BTC 24h: {market_ctx.get('btc_24h', 0):+.2f}%, trend: {market_ctx.get('btc_trend')}")
     print(f"Gemini quota used today: {gemini_quota_today()}/{GEMINI_DAILY_LIMIT}")
 
-    # Print current learned adjustments
     adj = rule_weight_adjustments()
     if adj:
         print("Learned weight adjustments:")
@@ -357,7 +408,7 @@ def scan_market():
     SCORE_FLOOR = 0.05
 
     for t, ch24, ch1h in candidates:
-        symbol = t["symbol"]
+        symbol = t  # already in 'XRB_USDT' format from get_tickers
         klines = get_klines(symbol)
         if len(klines) < 50: continue
         closes = [float(k[4]) for k in klines]
@@ -378,14 +429,9 @@ def scan_market():
             "rsi": rsi_v, "ema_trend": ema_trend, "bb_position": bb_position,
             "volume_ratio": vol_ratio, "momentum_1h": mom_1h,
             "btc_24h": market_ctx.get("btc_24h", 0),
+            "funding_rate": 0,  # filled below for top candidates
             "cg_30d": None, "cg_mcap_rank": None,
         }
-        if cg_calls < 5:
-            cg_data = get_coin_context(symbol)
-            if cg_data:
-                indicators["cg_30d"] = cg_data.get("change_30d")
-                indicators["cg_mcap_rank"] = cg_data.get("rank")
-                cg_calls += 1
         score, reasons = score_setup(indicators)
         if score < SCORE_FLOOR: continue
         side = "LONG" if (rsi_v < 50 or ema_trend == "up") else "SHORT"
@@ -398,9 +444,19 @@ def scan_market():
             "indicators": indicators, "reasons": reasons,
         })
 
+    # Fetch funding rate for top candidates (one request per coin)
+    funding_lookahead = GEMINI_TOP_N_PER_RUN * 3
+    for c in scored[:funding_lookahead]:
+        ctx = get_futures_context(c["symbol"])
+        c["indicators"]["funding_rate"] = ctx["funding_rate"]
+    # Re-score with funding context now in hand
+    for c in scored:
+        new_score, new_reasons = score_setup(c["indicators"])
+        c["score"] = new_score; c["reasons"] = new_reasons
+
     scored.sort(key=lambda x: x["score"], reverse=True)
     top = scored[:GEMINI_TOP_N_PER_RUN]
-    print(f"  {len(scored)} coins pass score floor; consulting Gemini on top {len(top)}")
+    print(f"  {len(scored)} perps pass score floor; consulting Gemini on top {len(top)}")
 
     quota_used = gemini_quota_today()
     quota_left = max(0, GEMINI_DAILY_LIMIT - quota_used)
@@ -442,7 +498,7 @@ def scan_market():
         signals.append(sig)
         print(f"  ✓ {side} {c['symbol']} score={c['score']:.2f} entry={last_close:.6g} (gemini: {c['gemini_reply'][:30]})")
 
-    print(f"Generated {len(signals)} signals (CG calls: {cg_calls}, Gemini calls: {gemini_calls_made}/{GEMINI_TOP_N_PER_RUN})")
+    print(f"Generated {len(signals)} signals (Gemini calls: {gemini_calls_made}/{GEMINI_TOP_N_PER_RUN})")
     return signals
 
 def check_outcomes(open_signals):
@@ -488,7 +544,7 @@ def broadcast_signals(signals, to_admin=False):
     if not signals:
         if to_admin: tg_send("0 signals updated this run.", to_admin=True)
         return
-    text = "<b>🚀 TA-BOT ML SIGNALS</b>\n\n"
+    text = "<b>🚀 TA-BOT ML SIGNALS (Futures)</b>\n\n"
     for sig in signals:
         if "close_price" in sig:
             emoji = "✅" if "WIN" in sig["status"] else "❌"
@@ -514,7 +570,26 @@ def get_btc_eth_context():
         return {"btc_24h": btc_24h, "btc_trend": btc_trend}
     except: return {"btc_24h": 0, "btc_trend": "neutral"}
 
+def archive_spot_signals_if_needed():
+    """One-time migration: if data/signals.json has spot-format symbols
+    (no underscore) and SPOT_ARCHIVE_FILE doesn't exist yet, archive them."""
+    if not os.path.exists(STATE_FILE): return
+    if os.path.exists(SPOT_ARCHIVE_FILE): return
+    try:
+        with open(STATE_FILE) as f: sigs = json.load(f)
+        if not isinstance(sigs, list): return
+        # Spot symbols are like "XRBUSDT" (no underscore); futures are "XRB_USDT"
+        has_spot = any("_" not in s.get("symbol", "") for s in sigs)
+        if has_spot and sigs:
+            with open(SPOT_ARCHIVE_FILE, "w") as f:
+                json.dump(sigs, f, indent=2, default=str)
+            print(f"Archived {len(sigs)} spot signals to {SPOT_ARCHIVE_FILE}")
+            with open(STATE_FILE, "w") as f: json.dump([], f)
+    except Exception as e:
+        print(f"Archive error: {e}")
+
 if __name__ == "__main__":
+    archive_spot_signals_if_needed()
     signals = scan_market()
     if signals:
         broadcast_signals(signals)
@@ -525,7 +600,6 @@ if __name__ == "__main__":
         broadcast_signals(updated, to_admin=True)
         save_signals(updated)
         print(f"Updated {len(updated)} signals")
-    # Learning loop: log rule outcomes from ALL closed signals
     all_signals = load_signals()
     new_outcomes, stats = learn_from_outcomes(all_signals)
     if new_outcomes:
