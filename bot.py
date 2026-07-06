@@ -103,8 +103,7 @@ def get_1h_change(symbol):
     return None
 
 def get_tickers():
-    """Return top-volume USDT pairs passing 24h >= 0.03% volatility.
-    (Lowered from 0.1% to 0.03% to catch more signals.)"""
+    """Return top-volume USDT pairs passing 24h >= 0.03% volatility."""
     top = get_top_usdt_tickers(TOP_N_BY_VOLUME)
     if not top: return []
 
@@ -112,7 +111,6 @@ def get_tickers():
     candidates_24h = [x for x in top if abs(x["ch24"]) >= FLOOR]
     print(f"  Top {len(top)} by volume, {len(candidates_24h)} pass 24h >= {FLOOR}%")
 
-    # Combine
     out = [(x["t"], x["ch24"], None) for x in candidates_24h]
     return out
 
@@ -170,7 +168,6 @@ def ema(data, period=9):
     if len(data) < period:
         return None
     k = 2 / (period + 1)
-    # Seed with simple mean of the first `period` values (was pandas Series.mean() which crashed on list)
     ema_val = sum(data[:period]) / period
     for price in data[period:]:
         ema_val = price * k + ema_val * (1 - k)
@@ -213,9 +210,13 @@ def volume_spike(volumes):
     return volumes[-1] / avg
 
 def score_setup(indicators):
-    """Score a coin setup (0.0–1.0)."""
-    score = 0.0
-    reasons = []
+    """Score a coin setup (0.0–1.0).
+    Base 0.20 so a coin with 'EMA down' alone (–0.15) is still positive (0.05)
+    and gets a chance to be evaluated. Weights tuned 2026-07-06: previous setup
+    had base 0.0 and floor 0.05, so EMA-down coins were filtered out completely
+    (all 188 candidates in the run scored 0.00)."""
+    score = 0.20   # base: any coin with valid indicators gets a starting chance
+    reasons = ["base"]
 
     # RSI: oversold (<30) or overbought (>70) is good for reversal
     rsi_v = indicators.get("rsi", 50)
@@ -282,7 +283,11 @@ def market_allows_side(side, market_ctx):
     return True, "OK"
 
 def gemini_decide(symbol, side, indicators, market_ctx):
-    """Ask Gemini 2.0 Flash for YES/NO on a signal."""
+    """Ask Gemini 2.0 Flash for YES/NO on a signal.
+    Returns (bool, str): (decision, raw_reply). On API failure returns (True, error)
+    so the rules-based score is the gate; Gemini is advisory, not blocking.
+    Previously a Gemini error returned False and silently rejected 100% of
+    candidates even when the indicators were strong."""
     prompt = f"""Given the following crypto setup, should we take a {side} position on {symbol}? Answer YES or NO.
 
 Indicators:
@@ -295,12 +300,19 @@ Indicators:
 
 Answer YES or NO."""
     try:
-        r = requests.post(f"{GEMINI_URL}?key={GEMINI_KEY}", json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=20)
-        reply = r.json()["candidates"][0]["content"]["parts"][0]["text"].strip().upper()
-        return "YES" in reply
+        r = requests.post(f"{GEMINI_URL}?key={GEMINI_KEY}",
+                          json={"contents": [{"parts": [{"text": prompt}]}]},
+                          timeout=20)
+        data = r.json()
+        if "candidates" not in data or not data["candidates"]:
+            # Safety filter or quota: don't block on this
+            print(f"  Gemini advisory unavailable: {data.get('error', data) if isinstance(data, dict) else 'no candidates'}")
+            return True, "advisory_unavailable"
+        reply = data["candidates"][0]["content"]["parts"][0]["text"].strip().upper()
+        return ("YES" in reply), reply
     except Exception as e:
-        print(f"Gemini error: {e}")
-        return False
+        print(f"  Gemini error: {e}")
+        return True, f"error:{e}"  # advisory only — don't block rules-based signals
 
 # ===== Main scan =====
 def scan_market():
@@ -313,9 +325,8 @@ def scan_market():
     print(f"BTC 24h: {market_ctx.get('btc_24h', 0):+.2f}%, trend: {market_ctx.get('btc_trend')}")
 
     signals = []; cg_calls = 0
-    # The main loop handles the <50 klines check inline; no separate pre-filter
-    # (the old pre-filter hammered MEXC with 300+ sequential kline calls, hit
-    # rate limit, returned empty arrays for everyone, and dropped all 302 candidates)
+    SCORE_FLOOR = 0.05  # 2026-07-06: lowered threshold; base score is now 0.20
+
     for t, ch24, ch1h in candidates:
         symbol = t["symbol"]
         klines = get_klines(symbol)
@@ -337,6 +348,7 @@ def scan_market():
         indicators = {
             "rsi": rsi_v, "ema_trend": ema_trend, "bb_position": bb_position,
             "volume_ratio": vol_ratio, "momentum_1h": mom_1h,
+            "btc_24h": market_ctx.get("btc_24h", 0),
             "cg_30d": None, "cg_mcap_rank": None,
         }
         if cg_calls < 5:
@@ -346,11 +358,12 @@ def scan_market():
                 indicators["cg_mcap_rank"] = cg_data.get("rank")
                 cg_calls += 1
         score, reasons = score_setup(indicators)
-        if score < 0.05: print(f"  {symbol} -> score {score:.2f} (need 0.05+): {reasons}"); continue  # lowered 0.10->0.05 on 2026-07-06 for more volume; was getting 0 signals
+        if score < SCORE_FLOOR: print(f"  {symbol} -> score {score:.2f} (need {SCORE_FLOOR}+): {reasons}"); continue
         side = "LONG" if (rsi_v < 50 or ema_trend == "up") else "SHORT"
         allowed, block_reason = market_allows_side(side, market_ctx)
         if not allowed: print(f"  {symbol} {side} -> {block_reason}"); continue
-        if not gemini_decide(symbol, side, indicators, market_ctx): print(f"  {symbol} {side} -> Gemini rejected"); continue
+        gem_ok, gem_reply = gemini_decide(symbol, side, indicators, market_ctx)
+        if not gem_ok: print(f"  {symbol} {side} -> Gemini said NO: {gem_reply[:50]}"); continue
         if side == "LONG":
             sl = last_close - atr_v * 1.5
             tp1 = last_close + atr_v * 1.0; tp2 = last_close + atr_v * 2.0; tp3 = last_close + atr_v * 3.0
@@ -379,7 +392,6 @@ def check_outcomes(open_signals):
     for sig in open_signals:
         symbol = sig["symbol"]
         old_status = sig.get("status")
-        # already closed
         if old_status in ("CLOSED_WIN_TP1", "CLOSED_WIN_TP2", "CLOSED_WIN_TP3", "CLOSED_LOSS", "EXPIRED"):
             continue
         side = sig["side"]
@@ -387,7 +399,6 @@ def check_outcomes(open_signals):
         sl = sig["sl"]; tp1 = sig["tp1"]; tp2 = sig["tp2"]; tp3 = sig["tp3"]
         klines = get_klines(symbol, interval="60m", limit=2)
         if len(klines) < 2: continue
-        # last closed candle
         h = float(klines[-1][2]); l = float(klines[-1][3]); c = float(klines[-1][4])
         new_status = None
         if side == "LONG":
