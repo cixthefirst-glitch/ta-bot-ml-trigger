@@ -7,11 +7,6 @@ import requests
 from datetime import datetime, timezone, timedelta
 from concurrent.futures import ThreadPoolExecutor
 
-# ML module imports
-import sys as _sys
-_sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "ml"))
-from smc import get_smc_features
-
 # ===== Config =====
 MEXC_BASE = "https://api.mexc.com"  # spot (kept for server time)
 FUTURES_BASE = "https://contract.mexc.com"
@@ -336,12 +331,21 @@ def ml_win_probability(indicators, side, pre_ml_score, coefs_data):
     intercept = coefs_data.get("intercept", 0.0)
     if not coefs: return None
     ind = indicators or {}
+    smc = ind.get("smc", {}) or {}
     features = {
         "rsi": ind.get("rsi", 50) or 50,
         "volume_ratio": ind.get("volume_ratio", 1.0) or 1.0,
         "momentum_1h": ind.get("momentum_1h", 0) or 0,
         "score": pre_ml_score or 0.5,
         "btc_24h": ind.get("btc_24h", 0) or 0,
+        # SMC features (added when model trains on them)
+        # Defaults are neutral: structure_strength=0, all booleans=False
+        "structure_strength": smc.get("structure_strength", 0.0) or 0.0,
+        "in_discount": 1.0 if smc.get("in_discount") else 0.0,
+        "in_premium": 1.0 if smc.get("in_premium") else 0.0,
+        "near_supply_zone": 1.0 if smc.get("near_supply_zone") else 0.0,
+        "near_demand_zone": 1.0 if smc.get("near_demand_zone") else 0.0,
+        "choch_recently": 1.0 if smc.get("choch_recently") else 0.0,
         "side_long": 1.0 if side == "LONG" else 0.0,
     }
     z = intercept
@@ -397,34 +401,7 @@ def score_setup(indicators, side="LONG"):
     if fund > 0.0005: score -= 0.05; reasons.append("funding very high")
     elif fund < -0.0005: score += 0.05; reasons.append("funding very low")
 
-    score = apply_ml_adjustment(max(0.0, min(1.0, score)), indicators, side)
-
-    # SMC structure bonus: scale structure_strength by 0.05 (max +/-0.05)
-    smc = indicators.get("smc", {}) or {}
-    if smc:
-        s = smc.get("structure_strength", 0.0)
-        bos = smc.get("bos_direction")
-        # If structure agrees with side, apply positive adjustment
-        agree = (
-            (side == "LONG" and bos in ("BULL", "TESTING_HIGH")) or
-            (side == "SHORT" and bos in ("BEAR", "TESTING_LOW"))
-        )
-        # If structure clearly disagrees, dampen more
-        disagree = (
-            (side == "LONG" and bos in ("BEAR", "TESTING_LOW")) or
-            (side == "SHORT" and bos in ("BULL", "TESTING_HIGH"))
-        )
-        if agree and s > 0:
-            score += s * 0.05
-        elif disagree and s < 0:
-            score += s * 0.05  # negative structure_strength subtracts
-        # always append a tag with the structure description for transparency
-        desc = smc.get("description", "")
-        if desc and desc != "no structure":
-            tag = "SMC" if (s != 0) else "SMCn"
-            reasons.append(f"{tag} {desc}")
-
-    return max(0.0, min(1.0, score)), reasons
+    return apply_ml_adjustment(max(0.0, min(1.0, score)), indicators, side), reasons
 
 def market_allows_side(side, market_ctx):
     btc_24h = market_ctx.get("btc_24h", 0)
@@ -507,17 +484,12 @@ def scan_market():
         atr_v = atr(highs, lows, closes) or (last_close * 0.02)
         vol_ratio = volume_spike(volumes)
         mom_1h = ((closes[-1] - closes[-2]) / closes[-2] * 100) if len(closes) > 1 else 0
-        # SMC (Smart Money Concepts) structure features from ml/smc.py.
-        # Falls back to empty dict on short klines.
-        smc = get_smc_features(klines) if len(klines) >= 60 else {}
-
         indicators = {
             "rsi": rsi_v, "ema_trend": ema_trend, "bb_position": bb_position,
             "volume_ratio": vol_ratio, "momentum_1h": mom_1h,
             "btc_24h": market_ctx.get("btc_24h", 0),
             "funding_rate": 0,  # filled below for top candidates
             "cg_30d": None, "cg_mcap_rank": None,
-            "smc": smc,  # full structure dict
         }
         side = "LONG" if (rsi_v < 50 or ema_trend == "up") else "SHORT"
         score, reasons = score_setup(indicators, side)
@@ -681,10 +653,6 @@ def broadcast_signals(signals, to_admin=False):
             text += f"{emoji} <b>{sig['side']} {sig['symbol']}</b> ({sig['trigger']}: {sig.get('ch24', 0) or sig.get('ch1h', 0):+.1f}%)\n"
             text += f"Entry: {sig['entry']:.6g} | SL: {sig['sl']:.6g}\n"
             text += f"TP1: {sig['tp1']:.6g} | TP2: {sig['tp2']:.6g} | TP3: {sig['tp3']:.6g}\n"
-            # Append SMC structure info if present
-            smc_info = sig.get("indicators", {}).get("smc", {}) if isinstance(sig.get("indicators"), dict) else {}
-            if smc_info and smc_info.get("description") and smc_info["description"] != "no structure":
-                text += f"📊 <i>{smc_info['description']}</i>\n"
             text += f"Score: {sig['score']:.2f} ({', '.join(sig['reasons'])})\n\n"
     tg_send(text, to_admin=to_admin)
 
