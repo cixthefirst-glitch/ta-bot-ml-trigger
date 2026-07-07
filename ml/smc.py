@@ -2,7 +2,7 @@
 Smart Money Concepts (SMC) structure analyzer.
 
 Detects market structure features from OHLC klines:
-  - Swing highs/lows
+  - Swing highs/lows (with price levels)
   - Break of Structure (BOS) - continuation
   - Change of Character (ChoCH) - reversal
   - Premium / Discount zones
@@ -76,6 +76,11 @@ def get_smc_features(klines):
       near_demand_zone: bool
       structure_strength: float in [-1.0, +1.0]
       description: str (human-readable for telegram)
+      # NEW (for structure-aware TP/SL):
+      nearest_swing_high: float | None  - highest swing high below current price (long TP target)
+      nearest_swing_low: float | None   - lowest swing low above current price (short SL/TP target)
+      recent_range_high: float | None  - high of last 50 candles (long extended TP)
+      recent_range_low: float | None   - low of last 50 candles (short extended TP / long SL)
     Returns empty dict if insufficient data.
     """
     if not klines or len(klines) < MIN_KLINES:
@@ -100,15 +105,29 @@ def get_smc_features(klines):
     in_deep_premium = price_position > 0.7
 
     # 2) Swing detection
-    swing_highs = _find_swing_highs(highs)
-    swing_lows = _find_swing_lows(lows)
+    swing_high_idx = _find_swing_highs(highs)
+    swing_low_idx = _find_swing_lows(lows)
+
+    # 2b) NEW: nearest swing levels for TP/SL placement
+    # For LONG: nearest_swing_high = highest swing high below last_close (TP1/TP2 target)
+    # For SHORT: nearest_swing_low = lowest swing low above last_close (TP1/TP2 target)
+    nearest_swing_high = None
+    if swing_high_idx:
+        below = [highs[i] for i in swing_high_idx if highs[i] < last_close]
+        if below:
+            nearest_swing_high = max(below)
+    nearest_swing_low = None
+    if swing_low_idx:
+        above = [lows[i] for i in swing_low_idx if lows[i] > last_close]
+        if above:
+            nearest_swing_low = min(above)
 
     # 3) BOS direction
     bos_direction = None
     choch_recently = False
-    if swing_highs and swing_lows:
-        last_sh = highs[swing_highs[-1]]
-        last_sl = lows[swing_lows[-1]]
+    if swing_high_idx and swing_low_idx:
+        last_sh = highs[swing_high_idx[-1]]
+        last_sl = lows[swing_low_idx[-1]]
         if last_close > last_sh * 1.0005:
             bos_direction = "BULL"
         elif last_close < last_sl * 0.9995:
@@ -121,12 +140,12 @@ def get_smc_features(klines):
 
         # 4) ChoCH detection
         breaks = []
-        for idx in swing_highs:
+        for idx in swing_high_idx:
             if idx >= len(closes) - 30 and idx < len(closes) - 1:
                 future_closes = closes[idx + 1:]
                 if future_closes and all(c > highs[idx] for c in future_closes):
                     breaks.append((idx, "BULL"))
-        for idx in swing_lows:
+        for idx in swing_low_idx:
             if idx >= len(closes) - 30 and idx < len(closes) - 1:
                 future_closes = closes[idx + 1:]
                 if future_closes and all(c < lows[idx] for c in future_closes):
@@ -138,12 +157,12 @@ def get_smc_features(klines):
     # 5) Near supply/demand zones (within 1% of recent swing high/low)
     near_supply_zone = False
     near_demand_zone = False
-    if swing_highs:
-        recent_sh = highs[swing_highs[-1]]
+    if swing_high_idx:
+        recent_sh = highs[swing_high_idx[-1]]
         if last_close > 0 and abs(last_close - recent_sh) / last_close < 0.01:
             near_supply_zone = True
-    if swing_lows:
-        recent_sl = lows[swing_lows[-1]]
+    if swing_low_idx:
+        recent_sl = lows[swing_low_idx[-1]]
         if last_close > 0 and abs(last_close - recent_sl) / last_close < 0.01:
             near_demand_zone = True
 
@@ -205,6 +224,11 @@ def get_smc_features(klines):
         "near_demand_zone": near_demand_zone,
         "structure_strength": structure_strength,
         "description": description,
-        "swing_highs_count": len(swing_highs),
-        "swing_lows_count": len(swing_lows),
+        "swing_highs_count": len(swing_high_idx),
+        "swing_lows_count": len(swing_low_idx),
+        # NEW: for structure-aware TP/SL placement
+        "nearest_swing_high": nearest_swing_high,
+        "nearest_swing_low": nearest_swing_low,
+        "recent_range_high": range_high,
+        "recent_range_low": range_low,
     }
