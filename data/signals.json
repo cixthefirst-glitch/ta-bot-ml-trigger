@@ -72,7 +72,11 @@
     "ch24": 6.76,
     "ch1h": null,
     "gemini": "advisory_unavailable",
-    "status": "OPEN"
+    "status": "CLOSED_WIN_TP1",
+    "close_price": 0.17636428571428572,
+    "close_ts": "2026-07-07T00:00:00+00:00",
+    "OUTCOME_LOGGED": true,
+    "_backfill": "2026-07-07_manual_outcomes_check"
   },
   {
     "id": "A_USDT_1783378487",
@@ -254,7 +258,11 @@
     "ch24": -2.32,
     "ch1h": null,
     "gemini": "advisory_unavailable",
-    "status": "OPEN"
+    "status": "CLOSED_LOSS",
+    "close_price": 319.86642857142857,
+    "close_ts": "2026-07-07T00:00:00+00:00",
+    "OUTCOME_LOGGED": true,
+    "_backfill": "2026-07-07_manual_outcomes_check"
   },
   {
     "id": "VSTSTOCK_USDT_1783382154",
@@ -290,7 +298,11 @@
     "ch24": 2.23,
     "ch1h": null,
     "gemini": "advisory_unavailable",
-    "status": "OPEN"
+    "status": "CLOSED_LOSS",
+    "close_price": 155.66,
+    "close_ts": "2026-07-07T00:00:00+00:00",
+    "OUTCOME_LOGGED": true,
+    "_backfill": "2026-07-07_manual_outcomes_check"
   },
   {
     "id": "GSSTOCK_USDT_1783382154",
