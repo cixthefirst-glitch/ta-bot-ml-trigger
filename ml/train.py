@@ -80,8 +80,8 @@ def main():
     sigs = load_signals()
     closed = [s for s in sigs if outcome_label(s) is not None]
     print(f"Total signals: {len(sigs)}, closed: {len(closed)}")
-    if len(closed) < 20:
-        msg = f"🤖 <b>ML train</b>: need >=20 closed signals, have {len(closed)}. Skipping."
+    if len(closed) < 10:
+        msg = f"🤖 <b>ML train</b>: need >=10 closed signals, have {len(closed)}. Skipping."
         print(msg); tg_send(msg, to_admin=True)
         return
 
