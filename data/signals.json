@@ -1482,7 +1482,10 @@
     "ch24": 9.98,
     "ch1h": null,
     "gemini": "advisory_unavailable",
-    "status": "OPEN"
+    "status": "CLOSED_WIN_TP2",
+    "close_ts": "2026-07-07T09:25:01.390577+00:00",
+    "close_price": 0.03749857142857142,
+    "candles_checked": 1
   },
   {
     "id": "ADMSTOCK_USDT_1783414761",
@@ -1732,6 +1735,186 @@
     },
     "trigger": "24h",
     "ch24": 6.4799999999999995,
+    "ch1h": null,
+    "gemini": "advisory_unavailable",
+    "status": "OPEN"
+  },
+  {
+    "id": "US30_USDT_1783416300",
+    "ts": "2026-07-07T09:25:00.386727+00:00",
+    "symbol": "US30_USDT",
+    "side": "LONG",
+    "entry": 53181.84,
+    "sl": 53096.58642857142,
+    "tp1": 53238.67571428572,
+    "tp2": 53295.51142857143,
+    "tp3": 53352.34714285715,
+    "score": 0.3022870748209885,
+    "reasons": [
+      "base",
+      "EMA up",
+      "Volume spike"
+    ],
+    "indicators": {
+      "rsi": 50.84412763604764,
+      "ema_trend": "up",
+      "bb_position": "middle",
+      "volume_ratio": 3.050597881893107,
+      "momentum_1h": 0.022531562054133536,
+      "btc_24h": 0.6866968948103588,
+      "funding_rate": 0,
+      "cg_mcap_rank": null
+    },
+    "btc_context": {
+      "btc_24h": 0.6866968948103588,
+      "btc_trend": "up"
+    },
+    "trigger": "24h",
+    "ch24": 0.5599999999999999,
+    "ch1h": null,
+    "gemini": "advisory_unavailable",
+    "status": "OPEN"
+  },
+  {
+    "id": "AXONSTOCK_USDT_1783416300",
+    "ts": "2026-07-07T09:25:00.513880+00:00",
+    "symbol": "AXONSTOCK_USDT",
+    "side": "LONG",
+    "entry": 618.0,
+    "sl": 612.4071428571428,
+    "tp1": 621.7285714285714,
+    "tp2": 625.4571428571429,
+    "tp3": 629.1857142857143,
+    "score": 0.2247017000712491,
+    "reasons": [
+      "base",
+      "EMA up",
+      "Volume high"
+    ],
+    "indicators": {
+      "rsi": 57.56343754381049,
+      "ema_trend": "up",
+      "bb_position": "middle",
+      "volume_ratio": 1.5953375086986776,
+      "momentum_1h": 0.22055007784120617,
+      "btc_24h": 0.6866968948103588,
+      "funding_rate": 0,
+      "cg_mcap_rank": null
+    },
+    "btc_context": {
+      "btc_24h": 0.6866968948103588,
+      "btc_trend": "up"
+    },
+    "trigger": "24h",
+    "ch24": 1.22,
+    "ch1h": null,
+    "gemini": "advisory_unavailable",
+    "status": "OPEN"
+  },
+  {
+    "id": "CAP_USDT_1783416300",
+    "ts": "2026-07-07T09:25:00.765068+00:00",
+    "symbol": "CAP_USDT",
+    "side": "LONG",
+    "entry": 0.02341,
+    "sl": 0.021824285714285713,
+    "tp1": 0.024467142857142857,
+    "tp2": 0.025524285714285715,
+    "tp3": 0.026581428571428572,
+    "score": 0.21996616443722464,
+    "reasons": [
+      "base",
+      "EMA up",
+      "Momentum +3.2%"
+    ],
+    "indicators": {
+      "rsi": 50.70422535211267,
+      "ema_trend": "up",
+      "bb_position": "middle",
+      "volume_ratio": 0.3848866410861231,
+      "momentum_1h": 3.173204054649634,
+      "btc_24h": 0.6866968948103588,
+      "funding_rate": 0,
+      "cg_mcap_rank": null
+    },
+    "btc_context": {
+      "btc_24h": 0.6866968948103588,
+      "btc_trend": "up"
+    },
+    "trigger": "24h",
+    "ch24": 3.44,
+    "ch1h": null,
+    "gemini": "advisory_unavailable",
+    "status": "OPEN"
+  },
+  {
+    "id": "VANRY_USDT_1783416300",
+    "ts": "2026-07-07T09:25:00.893325+00:00",
+    "symbol": "VANRY_USDT",
+    "side": "LONG",
+    "entry": 0.007806,
+    "sl": 0.006699107142857143,
+    "tp1": 0.00854392857142857,
+    "tp2": 0.009281857142857142,
+    "tp3": 0.010019785714285714,
+    "score": 0.21203086671409999,
+    "reasons": [
+      "base",
+      "EMA up",
+      "Momentum -3.4%"
+    ],
+    "indicators": {
+      "rsi": 60.853032801905805,
+      "ema_trend": "up",
+      "bb_position": "middle",
+      "volume_ratio": 0.24009770028512054,
+      "momentum_1h": -3.4269454410491194,
+      "btc_24h": 0.6866968948103588,
+      "funding_rate": -0.000413,
+      "cg_mcap_rank": null
+    },
+    "btc_context": {
+      "btc_24h": 0.6866968948103588,
+      "btc_trend": "up"
+    },
+    "trigger": "24h",
+    "ch24": -5.609999999999999,
+    "ch1h": null,
+    "gemini": "advisory_unavailable",
+    "status": "OPEN"
+  },
+  {
+    "id": "CRMSTOCK_USDT_1783416301",
+    "ts": "2026-07-07T09:25:01.021841+00:00",
+    "symbol": "CRMSTOCK_USDT",
+    "side": "LONG",
+    "entry": 168.59,
+    "sl": 167.58928571428572,
+    "tp1": 169.25714285714287,
+    "tp2": 169.9242857142857,
+    "tp3": 170.59142857142857,
+    "score": 0.16499633103268446,
+    "reasons": [
+      "base",
+      "EMA up",
+      "BB above upper"
+    ],
+    "indicators": {
+      "rsi": 53.76053962900504,
+      "ema_trend": "up",
+      "bb_position": "above_upper",
+      "volume_ratio": 0.39223805311400123,
+      "momentum_1h": 0.0,
+      "btc_24h": 0.6866968948103588,
+      "funding_rate": 0,
+      "cg_mcap_rank": null
+    },
+    "btc_context": {
+      "btc_24h": 0.6866968948103588,
+      "btc_trend": "up"
+    },
+    "trigger": "24h",
+    "ch24": 1.01,
     "ch1h": null,
     "gemini": "advisory_unavailable",
     "status": "OPEN"
