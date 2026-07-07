@@ -3561,5 +3561,255 @@
     "ch1h": null,
     "gemini": "advisory_unavailable",
     "status": "OPEN"
+  },
+  {
+    "id": "MMT_USDT_1783455531",
+    "ts": "2026-07-07T20:18:51.135782+00:00",
+    "symbol": "MMT_USDT",
+    "side": "LONG",
+    "entry": 0.143,
+    "sl": 0.14038571428571428,
+    "tp1": 0.14474285714285712,
+    "tp2": 0.14648571428571427,
+    "tp3": 0.14822857142857143,
+    "score": 0.6481999363862532,
+    "reasons": [
+      "base",
+      "EMA up",
+      "SMC Bullish BOS | discount | at supply"
+    ],
+    "indicators": {
+      "rsi": 43.49315068493149,
+      "ema_trend": "up",
+      "bb_position": "middle",
+      "volume_ratio": 0.42780426297202395,
+      "momentum_1h": 0.6333567909922477,
+      "btc_24h": 0.2649275170682404,
+      "funding_rate": 0,
+      "cg_mcap_rank": null,
+      "smc": {
+        "bos_direction": "BULL",
+        "choch_recently": false,
+        "in_discount": true,
+        "in_premium": false,
+        "in_deep_discount": false,
+        "in_deep_premium": false,
+        "near_supply_zone": true,
+        "near_demand_zone": false,
+        "structure_strength": 0.55,
+        "description": "Bullish BOS | discount | at supply",
+        "swing_highs_count": 7,
+        "swing_lows_count": 8
+      }
+    },
+    "btc_context": {
+      "btc_24h": 0.2649275170682404,
+      "btc_trend": "up"
+    },
+    "trigger": "24h",
+    "ch24": 1.9900000000000002,
+    "ch1h": null,
+    "gemini": "advisory_unavailable",
+    "status": "OPEN"
+  },
+  {
+    "id": "SOL_USDT_1783455531",
+    "ts": "2026-07-07T20:18:51.259422+00:00",
+    "symbol": "SOL_USDT",
+    "side": "LONG",
+    "entry": 81.26,
+    "sl": 80.12214285714286,
+    "tp1": 82.01857142857143,
+    "tp2": 82.77714285714286,
+    "tp3": 83.53571428571429,
+    "score": 0.6381999582350268,
+    "reasons": [
+      "base",
+      "EMA up",
+      "SMC discount | at demand"
+    ],
+    "indicators": {
+      "rsi": 49.249061326658335,
+      "ema_trend": "up",
+      "bb_position": "middle",
+      "volume_ratio": 0.2985547729716291,
+      "momentum_1h": -0.08606910119266345,
+      "btc_24h": 0.2649275170682404,
+      "funding_rate": 4.4e-05,
+      "cg_mcap_rank": null,
+      "smc": {
+        "bos_direction": null,
+        "choch_recently": false,
+        "in_discount": true,
+        "in_premium": false,
+        "in_deep_discount": false,
+        "in_deep_premium": false,
+        "near_supply_zone": false,
+        "near_demand_zone": true,
+        "structure_strength": 0.35,
+        "description": "discount | at demand",
+        "swing_highs_count": 10,
+        "swing_lows_count": 8
+      }
+    },
+    "btc_context": {
+      "btc_24h": 0.2649275170682404,
+      "btc_trend": "up"
+    },
+    "trigger": "24h",
+    "ch24": -0.98,
+    "ch1h": null,
+    "gemini": "advisory_unavailable",
+    "status": "OPEN"
+  },
+  {
+    "id": "ONDO_USDT_1783455531",
+    "ts": "2026-07-07T20:18:51.377761+00:00",
+    "symbol": "ONDO_USDT",
+    "side": "LONG",
+    "entry": 0.3303,
+    "sl": 0.32475,
+    "tp1": 0.33399999999999996,
+    "tp2": 0.33769999999999994,
+    "tp3": 0.3413999999999999,
+    "score": 0.6381999476478215,
+    "reasons": [
+      "base",
+      "EMA up",
+      "SMC discount | at demand"
+    ],
+    "indicators": {
+      "rsi": 48.9977728285078,
+      "ema_trend": "up",
+      "bb_position": "middle",
+      "volume_ratio": 0.1197357177861331,
+      "momentum_1h": -0.2717391304347862,
+      "btc_24h": 0.2649275170682404,
+      "funding_rate": 0,
+      "cg_mcap_rank": null,
+      "smc": {
+        "bos_direction": null,
+        "choch_recently": false,
+        "in_discount": true,
+        "in_premium": false,
+        "in_deep_discount": false,
+        "in_deep_premium": false,
+        "near_supply_zone": false,
+        "near_demand_zone": true,
+        "structure_strength": 0.35,
+        "description": "discount | at demand",
+        "swing_highs_count": 9,
+        "swing_lows_count": 9
+      }
+    },
+    "btc_context": {
+      "btc_24h": 0.2649275170682404,
+      "btc_trend": "up"
+    },
+    "trigger": "24h",
+    "ch24": -1.92,
+    "ch1h": null,
+    "gemini": "advisory_unavailable",
+    "status": "OPEN"
+  },
+  {
+    "id": "BR_USDT_1783455531",
+    "ts": "2026-07-07T20:18:51.501715+00:00",
+    "symbol": "BR_USDT",
+    "side": "LONG",
+    "entry": 0.14445,
+    "sl": 0.14149714285714285,
+    "tp1": 0.14641857142857143,
+    "tp2": 0.14838714285714286,
+    "tp3": 0.1503557142857143,
+    "score": 0.6381998944961165,
+    "reasons": [
+      "base",
+      "EMA up",
+      "SMC discount | at demand"
+    ],
+    "indicators": {
+      "rsi": 46.464537087168374,
+      "ema_trend": "up",
+      "bb_position": "middle",
+      "volume_ratio": 0.3044269723846779,
+      "momentum_1h": -0.21414755457308973,
+      "btc_24h": 0.2649275170682404,
+      "funding_rate": 0,
+      "cg_mcap_rank": null,
+      "smc": {
+        "bos_direction": null,
+        "choch_recently": false,
+        "in_discount": true,
+        "in_premium": false,
+        "in_deep_discount": false,
+        "in_deep_premium": false,
+        "near_supply_zone": false,
+        "near_demand_zone": true,
+        "structure_strength": 0.35,
+        "description": "discount | at demand",
+        "swing_highs_count": 9,
+        "swing_lows_count": 8
+      }
+    },
+    "btc_context": {
+      "btc_24h": 0.2649275170682404,
+      "btc_trend": "up"
+    },
+    "trigger": "24h",
+    "ch24": -1.23,
+    "ch1h": null,
+    "gemini": "advisory_unavailable",
+    "status": "OPEN"
+  },
+  {
+    "id": "FF_USDT_1783455531",
+    "ts": "2026-07-07T20:18:51.629525+00:00",
+    "symbol": "FF_USDT",
+    "side": "LONG",
+    "entry": 0.06025,
+    "sl": 0.05921714285714286,
+    "tp1": 0.060938571428571425,
+    "tp2": 0.06162714285714285,
+    "tp3": 0.06231571428571428,
+    "score": 0.6331999836336764,
+    "reasons": [
+      "base",
+      "EMA up",
+      "SMC Bullish BOS | premium | at supply"
+    ],
+    "indicators": {
+      "rsi": 48.43689695098417,
+      "ema_trend": "up",
+      "bb_position": "middle",
+      "volume_ratio": 0.10856920132912916,
+      "momentum_1h": 0.1662510390689874,
+      "btc_24h": 0.2649275170682404,
+      "funding_rate": 0,
+      "cg_mcap_rank": null,
+      "smc": {
+        "bos_direction": "BULL",
+        "choch_recently": false,
+        "in_discount": false,
+        "in_premium": true,
+        "in_deep_discount": false,
+        "in_deep_premium": false,
+        "near_supply_zone": true,
+        "near_demand_zone": false,
+        "structure_strength": 0.24999999999999994,
+        "description": "Bullish BOS | premium | at supply",
+        "swing_highs_count": 9,
+        "swing_lows_count": 5
+      }
+    },
+    "btc_context": {
+      "btc_24h": 0.2649275170682404,
+      "btc_trend": "up"
+    },
+    "trigger": "24h",
+    "ch24": 1.67,
+    "ch1h": null,
+    "gemini": "advisory_unavailable",
+    "status": "OPEN"
   }
 ]
