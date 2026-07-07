@@ -3007,7 +3007,10 @@
     "ch24": -1.18,
     "ch1h": null,
     "gemini": "advisory_unavailable",
-    "status": "OPEN"
+    "status": "CLOSED_LOSS",
+    "close_ts": "2026-07-07T22:49:48.895171+00:00",
+    "close_price": 0.043148571428571425,
+    "candles_checked": 7
   },
   {
     "id": "EBAYSTOCK_USDT_1783438741",
@@ -3265,7 +3268,10 @@
     "ch24": -0.59,
     "ch1h": null,
     "gemini": "advisory_unavailable",
-    "status": "OPEN"
+    "status": "CLOSED_LOSS",
+    "close_ts": "2026-07-07T22:49:48.895171+00:00",
+    "close_price": 0.034379999999999994,
+    "candles_checked": 5
   },
   {
     "id": "CMCSASTOCK_USDT_1783446586",
@@ -3416,7 +3422,10 @@
     "ch24": -2.7,
     "ch1h": null,
     "gemini": "advisory_unavailable",
-    "status": "OPEN"
+    "status": "CLOSED_LOSS",
+    "close_ts": "2026-07-07T22:49:48.895171+00:00",
+    "close_price": 0.05632607142857143,
+    "candles_checked": 3
   },
   {
     "id": "SPACE_USDT_1783452618",
@@ -3566,7 +3575,10 @@
     "ch24": -1.9,
     "ch1h": null,
     "gemini": "advisory_unavailable",
-    "status": "OPEN"
+    "status": "CLOSED_LOSS",
+    "close_ts": "2026-07-07T22:49:48.895171+00:00",
+    "close_price": 0.011658214285714286,
+    "candles_checked": 3
   },
   {
     "id": "MMT_USDT_1783455531",
@@ -4067,6 +4079,260 @@
     },
     "trigger": "24h",
     "ch24": -1.4000000000000001,
+    "ch1h": null,
+    "gemini": "advisory_unavailable",
+    "status": "OPEN"
+  },
+  {
+    "id": "MMT_USDT_1783464587",
+    "ts": "2026-07-07T22:49:47.421608+00:00",
+    "symbol": "MMT_USDT",
+    "side": "LONG",
+    "entry": 0.1491,
+    "sl": 0.14560714285714285,
+    "tp1": 0.15142857142857144,
+    "tp2": 0.15375714285714287,
+    "tp3": 0.1560857142857143,
+    "score": 1.0,
+    "reasons": [
+      "base",
+      "EMA up",
+      "BB above upper",
+      "Volume spike",
+      "Momentum +1.4%",
+      "SMC Bullish BOS | deep premium"
+    ],
+    "indicators": {
+      "rsi": 45.960698689956345,
+      "ema_trend": "up",
+      "bb_position": "above_upper",
+      "volume_ratio": 4.141198963126808,
+      "momentum_1h": 1.3596193065941546,
+      "btc_24h": -1.044128751415695,
+      "funding_rate": 5e-05,
+      "cg_mcap_rank": null,
+      "smc": {
+        "bos_direction": "BULL",
+        "choch_recently": false,
+        "in_discount": false,
+        "in_premium": true,
+        "in_deep_discount": false,
+        "in_deep_premium": true,
+        "near_supply_zone": false,
+        "near_demand_zone": false,
+        "structure_strength": 0.3,
+        "description": "Bullish BOS | deep premium",
+        "swing_highs_count": 7,
+        "swing_lows_count": 8
+      }
+    },
+    "btc_context": {
+      "btc_24h": -1.044128751415695,
+      "btc_trend": "down"
+    },
+    "trigger": "24h",
+    "ch24": 6.41,
+    "ch1h": null,
+    "gemini": "advisory_unavailable",
+    "status": "OPEN"
+  },
+  {
+    "id": "M_USDT_1783464587",
+    "ts": "2026-07-07T22:49:47.592013+00:00",
+    "symbol": "M_USDT",
+    "side": "LONG",
+    "entry": 1.3136,
+    "sl": 1.216689285714286,
+    "tp1": 1.378207142857143,
+    "tp2": 1.4428142857142856,
+    "tp3": 1.5074214285714285,
+    "score": 0.7272999369522662,
+    "reasons": [
+      "base",
+      "EMA up",
+      "Momentum -1.1%",
+      "SMC discount"
+    ],
+    "indicators": {
+      "rsi": 45.1095197978096,
+      "ema_trend": "up",
+      "bb_position": "middle",
+      "volume_ratio": 0.11303279080103014,
+      "momentum_1h": -1.1066777083490127,
+      "btc_24h": -1.044128751415695,
+      "funding_rate": 8.6e-05,
+      "cg_mcap_rank": null,
+      "smc": {
+        "bos_direction": null,
+        "choch_recently": false,
+        "in_discount": true,
+        "in_premium": false,
+        "in_deep_discount": false,
+        "in_deep_premium": false,
+        "near_supply_zone": false,
+        "near_demand_zone": false,
+        "structure_strength": 0.15,
+        "description": "discount",
+        "swing_highs_count": 11,
+        "swing_lows_count": 8
+      }
+    },
+    "btc_context": {
+      "btc_24h": -1.044128751415695,
+      "btc_trend": "down"
+    },
+    "trigger": "24h",
+    "ch24": -3.36,
+    "ch1h": null,
+    "gemini": "advisory_unavailable",
+    "status": "OPEN"
+  },
+  {
+    "id": "VANRY_USDT_1783464587",
+    "ts": "2026-07-07T22:49:47.751886+00:00",
+    "symbol": "VANRY_USDT",
+    "side": "SHORT",
+    "entry": 0.006322,
+    "sl": 0.007019714285714286,
+    "tp1": 0.005856857142857143,
+    "tp2": 0.005391714285714285,
+    "tp3": 0.004926571428571428,
+    "score": 0.7107999985319761,
+    "reasons": [
+      "base",
+      "EMA down (good for short)",
+      "Momentum -2.0%"
+    ],
+    "indicators": {
+      "rsi": 56.718603799682676,
+      "ema_trend": "down",
+      "bb_position": "middle",
+      "volume_ratio": 0.10721280519946189,
+      "momentum_1h": -1.9996899705471984,
+      "btc_24h": -1.044128751415695,
+      "funding_rate": -0.000238,
+      "cg_mcap_rank": null,
+      "smc": {
+        "bos_direction": null,
+        "choch_recently": false,
+        "in_discount": true,
+        "in_premium": false,
+        "in_deep_discount": true,
+        "in_deep_premium": false,
+        "near_supply_zone": false,
+        "near_demand_zone": false,
+        "structure_strength": 0.3,
+        "description": "deep discount",
+        "swing_highs_count": 7,
+        "swing_lows_count": 10
+      }
+    },
+    "btc_context": {
+      "btc_24h": -1.044128751415695,
+      "btc_trend": "down"
+    },
+    "trigger": "24h",
+    "ch24": -8.780000000000001,
+    "ch1h": null,
+    "gemini": "advisory_unavailable",
+    "status": "OPEN"
+  },
+  {
+    "id": "SHIB_USDT_1783464588",
+    "ts": "2026-07-07T22:49:48.076873+00:00",
+    "symbol": "SHIB_USDT",
+    "side": "LONG",
+    "entry": 4.38e-06,
+    "sl": 4.305321428571429e-06,
+    "tp1": 4.429785714285714e-06,
+    "tp2": 4.479571428571429e-06,
+    "tp3": 4.529357142857143e-06,
+    "score": 0.6272999947066475,
+    "reasons": [
+      "base",
+      "EMA up",
+      "SMC discount"
+    ],
+    "indicators": {
+      "rsi": 49.86890403775564,
+      "ema_trend": "up",
+      "bb_position": "middle",
+      "volume_ratio": 1.2771353238572731,
+      "momentum_1h": 0.09140767824497945,
+      "btc_24h": -1.044128751415695,
+      "funding_rate": 0.0001,
+      "cg_mcap_rank": null,
+      "smc": {
+        "bos_direction": null,
+        "choch_recently": false,
+        "in_discount": true,
+        "in_premium": false,
+        "in_deep_discount": false,
+        "in_deep_premium": false,
+        "near_supply_zone": false,
+        "near_demand_zone": false,
+        "structure_strength": 0.15,
+        "description": "discount",
+        "swing_highs_count": 8,
+        "swing_lows_count": 8
+      }
+    },
+    "btc_context": {
+      "btc_24h": -1.044128751415695,
+      "btc_trend": "down"
+    },
+    "trigger": "24h",
+    "ch24": -1.35,
+    "ch1h": null,
+    "gemini": "advisory_unavailable",
+    "status": "OPEN"
+  },
+  {
+    "id": "KOSTOCK_USDT_1783464588",
+    "ts": "2026-07-07T22:49:48.238477+00:00",
+    "symbol": "KOSTOCK_USDT",
+    "side": "LONG",
+    "entry": 83.84,
+    "sl": 82.94321428571429,
+    "tp1": 84.43785714285714,
+    "tp2": 85.03571428571429,
+    "tp3": 85.63357142857143,
+    "score": 0.6272999886094546,
+    "reasons": [
+      "base",
+      "EMA up",
+      "SMC discount"
+    ],
+    "indicators": {
+      "rsi": 48.908554572271406,
+      "ema_trend": "up",
+      "bb_position": "middle",
+      "volume_ratio": 0.6425446300258678,
+      "momentum_1h": -0.03576964349588784,
+      "btc_24h": -1.044128751415695,
+      "funding_rate": 0,
+      "cg_mcap_rank": null,
+      "smc": {
+        "bos_direction": null,
+        "choch_recently": false,
+        "in_discount": true,
+        "in_premium": false,
+        "in_deep_discount": false,
+        "in_deep_premium": false,
+        "near_supply_zone": false,
+        "near_demand_zone": false,
+        "structure_strength": 0.15,
+        "description": "discount",
+        "swing_highs_count": 7,
+        "swing_lows_count": 7
+      }
+    },
+    "btc_context": {
+      "btc_24h": -1.044128751415695,
+      "btc_trend": "down"
+    },
+    "trigger": "24h",
+    "ch24": -0.77,
     "ch1h": null,
     "gemini": "advisory_unavailable",
     "status": "OPEN"

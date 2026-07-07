@@ -1,77 +1,82 @@
 {
   "EMA": {
-    "wins": 317,
-    "losses": 212,
-    "samples": 529
+    "wins": 354,
+    "losses": 242,
+    "samples": 596
   },
   "Bollinger": {
-    "wins": 68,
-    "losses": 57,
-    "samples": 125
+    "wins": 75,
+    "losses": 60,
+    "samples": 135
   },
   "Volume": {
-    "wins": 208,
-    "losses": 151,
-    "samples": 359
+    "wins": 228,
+    "losses": 166,
+    "samples": 394
   },
   "Momentum": {
-    "wins": 124,
-    "losses": 135,
-    "samples": 259
+    "wins": 137,
+    "losses": 151,
+    "samples": 288
   },
   "RSI": {
-    "wins": 32,
+    "wins": 35,
     "losses": 2,
-    "samples": 34
+    "samples": 37
   },
   "BTC": {
-    "wins": 18,
-    "losses": 32,
-    "samples": 50
+    "wins": 23,
+    "losses": 41,
+    "samples": 64
   },
   "SMC Bullish BOS | premium | at supply": {
-    "wins": 13,
+    "wins": 16,
     "losses": 0,
-    "samples": 13
+    "samples": 16
   },
   "SMC Bullish BOS | premium": {
-    "wins": 6,
-    "losses": 1,
-    "samples": 7
+    "wins": 7,
+    "losses": 2,
+    "samples": 9
   },
   "SMC Bullish BOS | premium | at demand | at supply": {
-    "wins": 6,
+    "wins": 7,
     "losses": 0,
-    "samples": 6
+    "samples": 7
   },
   "SMC discount": {
-    "wins": 14,
-    "losses": 3,
-    "samples": 17
+    "wins": 18,
+    "losses": 4,
+    "samples": 22
   },
   "SMC Bullish BOS | deep premium": {
     "wins": 0,
-    "losses": 8,
-    "samples": 8
+    "losses": 10,
+    "samples": 10
   },
   "SMC deep discount": {
     "wins": 0,
-    "losses": 3,
-    "samples": 3
+    "losses": 4,
+    "samples": 4
   },
   "SMC Testing swing high | discount | at demand | at supply": {
     "wins": 0,
-    "losses": 3,
-    "samples": 3
+    "losses": 4,
+    "samples": 4
   },
   "SMC deep discount | at demand | at supply": {
     "wins": 0,
-    "losses": 3,
-    "samples": 3
+    "losses": 4,
+    "samples": 4
   },
   "SMC Bullish BOS | discount | at supply": {
-    "wins": 1,
-    "losses": 0,
-    "samples": 1
+    "wins": 2,
+    "losses": 1,
+    "samples": 3
+  },
+  "SMC Testing swing low | discount | at demand": {
+    "wins": 0,
+    "losses": 2,
+    "samples": 2
   }
 }
