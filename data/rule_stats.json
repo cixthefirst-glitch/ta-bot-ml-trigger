@@ -1,45 +1,50 @@
 {
   "EMA": {
-    "wins": 149,
-    "losses": 98,
-    "samples": 247
+    "wins": 178,
+    "losses": 115,
+    "samples": 293
   },
   "Bollinger": {
-    "wins": 33,
-    "losses": 42,
-    "samples": 75
+    "wins": 40,
+    "losses": 45,
+    "samples": 85
   },
   "Volume": {
-    "wins": 109,
-    "losses": 80,
-    "samples": 189
+    "wins": 128,
+    "losses": 92,
+    "samples": 220
   },
   "Momentum": {
-    "wins": 67,
-    "losses": 69,
-    "samples": 136
+    "wins": 76,
+    "losses": 79,
+    "samples": 155
   },
   "RSI": {
-    "wins": 17,
+    "wins": 20,
     "losses": 2,
-    "samples": 19
+    "samples": 22
   },
   "BTC": {
-    "wins": 2,
-    "losses": 4,
-    "samples": 6
+    "wins": 3,
+    "losses": 6,
+    "samples": 9
   },
   "SMC Bullish BOS | premium | at supply": {
+    "wins": 3,
+    "losses": 0,
+    "samples": 3
+  },
+  "SMC Bullish BOS | premium": {
     "wins": 2,
     "losses": 0,
     "samples": 2
   },
-  "SMC Bullish BOS | premium": {
-    "wins": 1,
-    "losses": 0,
-    "samples": 1
-  },
   "SMC Bullish BOS | premium | at demand | at supply": {
+    "wins": 2,
+    "losses": 0,
+    "samples": 2
+  },
+  "SMC discount": {
     "wins": 1,
     "losses": 0,
     "samples": 1
