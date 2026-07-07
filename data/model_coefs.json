@@ -1,0 +1,31 @@
+{
+  "ts": "2026-07-07T08:56:22.306032+00:00",
+  "coefs": {
+    "rsi": -0.09462046362524612,
+    "volume_ratio": 0.7602173919932443,
+    "momentum_1h": 0.18174641119591903,
+    "score": -0.5608894207422762,
+    "btc_24h": 0.005927892677462347,
+    "structure_strength": 0.0,
+    "in_discount": 0.0,
+    "in_premium": 0.0,
+    "near_supply_zone": 0.0,
+    "near_demand_zone": 0.0,
+    "choch_recently": 0.0,
+    "side_long": 0.0
+  },
+  "intercept": 0.16842240380744722,
+  "accuracy": 0.42857142857142855,
+  "n_train": 19,
+  "n_test": 7,
+  "win_rate": 0.6538461538461539,
+  "n_with_smc": 0,
+  "smc_features": [
+    "structure_strength",
+    "in_discount",
+    "in_premium",
+    "near_supply_zone",
+    "near_demand_zone",
+    "choch_recently"
+  ]
+}
