@@ -35,5 +35,21 @@ jobs:
           git config user.name "ta-bot-ml-bot"
           git config user.email "bot@ta-ml.local"
           git add data/ || true
-          git diff --cached --quiet || git commit -m "auto: retrain $(date -u +%FT%TZ)"
-          git push
+          # If nothing changed, exit cleanly
+          git diff --cached --quiet && echo "No data changes to commit" && exit 0
+          # Try a clean non-fast-forward commit first; on conflict, rebase onto origin/main
+          if ! git commit -m "auto: retrain $(date -u +%FT%TZ)"; then
+            echo "Commit failed (likely no changes)"
+            exit 0
+          fi
+          # Push, but if rejected (non-fast-forward, e.g. someone else pushed), rebase and retry
+          if ! git push origin HEAD:main; then
+            echo "Push rejected, attempting rebase onto origin/main"
+            git fetch origin main
+            if git rebase origin/main; then
+              git push origin HEAD:main
+            else
+              echo "Rebase failed - manual intervention needed"
+              exit 1
+            fi
+          fi
