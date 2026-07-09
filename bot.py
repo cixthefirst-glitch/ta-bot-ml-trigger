@@ -1,1 +1,1 @@
-base64:bot_new_b64.txt
+base64:bot_fixed_b64.txt
