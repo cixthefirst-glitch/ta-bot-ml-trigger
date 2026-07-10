@@ -1,1 +1,1 @@
-file:bot_full.py
+file:bot_fresh.py
