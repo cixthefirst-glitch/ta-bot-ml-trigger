@@ -1553,7 +1553,9 @@
     "ch24": 0.12,
     "ch1h": null,
     "gemini": "advisory_unavailable",
-    "status": "OPEN"
+    "status": "CLOSED_LOSS",
+    "closed_at": "2026-07-10T23:34:02.810131+00:00",
+    "closed_price": 0.0
   },
   {
     "id": "NOM_USDT_1783414761",
@@ -2790,7 +2792,9 @@
     "ch24": 1.44,
     "ch1h": null,
     "gemini": "advisory_unavailable",
-    "status": "OPEN"
+    "status": "CLOSED_LOSS",
+    "closed_at": "2026-07-10T23:34:03.020374+00:00",
+    "closed_price": 0.0
   },
   {
     "id": "APE_USDT_1783438741",
@@ -3115,7 +3119,9 @@
     "ch24": -8.67,
     "ch1h": null,
     "gemini": "advisory_unavailable",
-    "status": "OPEN"
+    "status": "CLOSED_WIN_TP3",
+    "closed_at": "2026-07-10T23:34:03.231312+00:00",
+    "closed_price": 0.0
   },
   {
     "id": "XPIN_USDT_1783446586",
@@ -3165,7 +3171,9 @@
     "ch24": -0.75,
     "ch1h": null,
     "gemini": "advisory_unavailable",
-    "status": "OPEN"
+    "status": "CLOSED_LOSS",
+    "closed_at": "2026-07-10T23:34:03.443710+00:00",
+    "closed_price": 0.0
   },
   {
     "id": "ZEST_USDT_1783446586",
@@ -3321,7 +3329,9 @@
     "ch24": -1.05,
     "ch1h": null,
     "gemini": "advisory_unavailable",
-    "status": "OPEN"
+    "status": "CLOSED_LOSS",
+    "closed_at": "2026-07-10T23:34:03.657094+00:00",
+    "closed_price": 0.0
   },
   {
     "id": "ZIG_USDT_1783452617",
@@ -3372,7 +3382,9 @@
     "ch24": 0.12,
     "ch1h": null,
     "gemini": "advisory_unavailable",
-    "status": "OPEN"
+    "status": "CLOSED_LOSS",
+    "closed_at": "2026-07-10T23:34:03.866543+00:00",
+    "closed_price": 0.0
   },
   {
     "id": "TROLLSOL_USDT_1783452617",
@@ -3475,7 +3487,9 @@
     "ch24": -1.8399999999999999,
     "ch1h": null,
     "gemini": "advisory_unavailable",
-    "status": "OPEN"
+    "status": "CLOSED_LOSS",
+    "closed_at": "2026-07-10T23:34:04.081781+00:00",
+    "closed_price": 0.0
   },
   {
     "id": "BR_USDT_1783452618",
@@ -3525,7 +3539,9 @@
     "ch24": -1.11,
     "ch1h": null,
     "gemini": "advisory_unavailable",
-    "status": "OPEN"
+    "status": "CLOSED_LOSS",
+    "closed_at": "2026-07-10T23:34:04.293624+00:00",
+    "closed_price": 0.0
   },
   {
     "id": "WOO_USDT_1783452618",
@@ -3681,7 +3697,9 @@
     "ch24": -0.98,
     "ch1h": null,
     "gemini": "advisory_unavailable",
-    "status": "OPEN"
+    "status": "CLOSED_LOSS",
+    "closed_at": "2026-07-10T23:34:04.510063+00:00",
+    "closed_price": 0.0
   },
   {
     "id": "ONDO_USDT_1783455531",
@@ -3731,7 +3749,9 @@
     "ch24": -1.92,
     "ch1h": null,
     "gemini": "advisory_unavailable",
-    "status": "OPEN"
+    "status": "CLOSED_LOSS",
+    "closed_at": "2026-07-10T23:34:04.729226+00:00",
+    "closed_price": 0.0
   },
   {
     "id": "BR_USDT_1783455531",
@@ -3781,7 +3801,9 @@
     "ch24": -1.23,
     "ch1h": null,
     "gemini": "advisory_unavailable",
-    "status": "OPEN"
+    "status": "CLOSED_LOSS",
+    "closed_at": "2026-07-10T23:34:04.939767+00:00",
+    "closed_price": 0.0
   },
   {
     "id": "FF_USDT_1783455531",
@@ -3831,7 +3853,9 @@
     "ch24": 1.67,
     "ch1h": null,
     "gemini": "advisory_unavailable",
-    "status": "OPEN"
+    "status": "CLOSED_LOSS",
+    "closed_at": "2026-07-10T23:34:05.148869+00:00",
+    "closed_price": 0.0
   },
   {
     "id": "DDOGSTOCK_USDT_1783458778",
@@ -3881,7 +3905,9 @@
     "ch24": -2.76,
     "ch1h": null,
     "gemini": "advisory_unavailable",
-    "status": "OPEN"
+    "status": "CLOSED_LOSS",
+    "closed_at": "2026-07-10T23:34:05.362743+00:00",
+    "closed_price": 0.0
   },
   {
     "id": "KOSTOCK_USDT_1783458778",
@@ -3931,7 +3957,9 @@
     "ch24": -0.54,
     "ch1h": null,
     "gemini": "advisory_unavailable",
-    "status": "OPEN"
+    "status": "CLOSED_LOSS",
+    "closed_at": "2026-07-10T23:34:05.568152+00:00",
+    "closed_price": 0.0
   },
   {
     "id": "ZIG_USDT_1783458778",
@@ -3981,7 +4009,9 @@
     "ch24": -0.04,
     "ch1h": null,
     "gemini": "advisory_unavailable",
-    "status": "OPEN"
+    "status": "CLOSED_LOSS",
+    "closed_at": "2026-07-10T23:34:05.857773+00:00",
+    "closed_price": 0.0
   },
   {
     "id": "SOL_USDT_1783458778",
@@ -4031,7 +4061,9 @@
     "ch24": -0.96,
     "ch1h": null,
     "gemini": "advisory_unavailable",
-    "status": "OPEN"
+    "status": "CLOSED_LOSS",
+    "closed_at": "2026-07-10T23:34:06.077289+00:00",
+    "closed_price": 0.0
   },
   {
     "id": "SPACE_USDT_1783458778",
@@ -4081,7 +4113,9 @@
     "ch24": -1.4000000000000001,
     "ch1h": null,
     "gemini": "advisory_unavailable",
-    "status": "OPEN"
+    "status": "CLOSED_LOSS",
+    "closed_at": "2026-07-10T23:34:06.284022+00:00",
+    "closed_price": 0.0
   },
   {
     "id": "MMT_USDT_1783464587",
@@ -4134,7 +4168,9 @@
     "ch24": 6.41,
     "ch1h": null,
     "gemini": "advisory_unavailable",
-    "status": "OPEN"
+    "status": "CLOSED_LOSS",
+    "closed_at": "2026-07-10T23:34:06.499606+00:00",
+    "closed_price": 0.0
   },
   {
     "id": "M_USDT_1783464587",
@@ -4185,7 +4221,9 @@
     "ch24": -3.36,
     "ch1h": null,
     "gemini": "advisory_unavailable",
-    "status": "OPEN"
+    "status": "CLOSED_LOSS",
+    "closed_at": "2026-07-10T23:34:06.705124+00:00",
+    "closed_price": 0.0
   },
   {
     "id": "VANRY_USDT_1783464587",
@@ -4235,7 +4273,9 @@
     "ch24": -8.780000000000001,
     "ch1h": null,
     "gemini": "advisory_unavailable",
-    "status": "OPEN"
+    "status": "CLOSED_WIN_TP3",
+    "closed_at": "2026-07-10T23:34:06.919255+00:00",
+    "closed_price": 0.0
   },
   {
     "id": "SHIB_USDT_1783464588",
@@ -4285,7 +4325,9 @@
     "ch24": -1.35,
     "ch1h": null,
     "gemini": "advisory_unavailable",
-    "status": "OPEN"
+    "status": "CLOSED_LOSS",
+    "closed_at": "2026-07-10T23:34:07.127588+00:00",
+    "closed_price": 0.0
   },
   {
     "id": "KOSTOCK_USDT_1783464588",
@@ -4335,6 +4377,8 @@
     "ch24": -0.77,
     "ch1h": null,
     "gemini": "advisory_unavailable",
-    "status": "OPEN"
+    "status": "CLOSED_LOSS",
+    "closed_at": "2026-07-10T23:34:07.334837+00:00",
+    "closed_price": 0.0
   }
 ]
