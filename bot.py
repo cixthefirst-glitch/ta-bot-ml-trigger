@@ -1,1 +1,1 @@
-base64:bot_restored_b64.txt
+file:bot_plain.py
