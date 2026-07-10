@@ -23,18 +23,18 @@ import requests
 from datetime import datetime, timezone
 
 # ─── ENV ────────────────────────────────────────────────────────────────────
-GEMINI_API_KEY      = os.environ.get("GEMINI_API_KEY", "")
+GROQ_API_KEY        = os.environ.get("GROQ_API_KEY", "")
 TG_TOKEN            = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 TG_CHAT             = os.environ.get("TELEGRAM_CHAT_ID", "")
 ADMIN_CHAT          = os.environ.get("ADMIN_CHAT_ID", "")
 MEXC_BASE           = "https://api.mexc.com"
-GEMINI_MODEL        = "gemini-1.5-flash"
+GROQ_MODEL          = "llama-3.1-8b-instant"
 
 # ─── CONFIG ─────────────────────────────────────────────────────────────────
 KLINE_INTERVAL      = "1h"
 KLINE_LIMIT         = 200
 SCAN_LIMIT          = 40
-VOLATILITY_MIN      = 3.0
+VOLATILITY_MIN      = 1.0
 SCORE_THRESHOLD     = 0.45
 ATR_SL_MULT         = 1.5
 ATR_TP1_MULT        = 1.0
@@ -105,7 +105,7 @@ def get_top_volatile_coins(limit=SCAN_LIMIT):
             if t.get("symbol", "").endswith("USDT")
             and not t["symbol"].startswith("USDC")
             and abs(float(t.get("priceChangePercent", 0))) >= VOLATILITY_MIN
-            and float(t.get("quoteVolume", 0)) > 500_000
+            and float(t.get("quoteVolume", 0)) > 100_000
         ]
         candidates.sort(
             key=lambda t: abs(float(t.get("priceChangePercent", 0))),
