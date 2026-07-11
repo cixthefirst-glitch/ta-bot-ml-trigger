@@ -33,7 +33,7 @@ GROQ_MODEL          = "llama-3.1-8b-instant"
 # ─── CONFIG ─────────────────────────────────────────────────────────────────
 KLINE_INTERVAL      = "1h"
 KLINE_LIMIT         = 200
-SCAN_LIMIT          = 40
+SCAN_LIMIT          = 800
 VOLATILITY_MIN      = 0.1
 SCORE_THRESHOLD     = 0.45
 ATR_SL_MULT         = 1.5
